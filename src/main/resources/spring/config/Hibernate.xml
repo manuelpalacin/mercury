@@ -1,0 +1,35 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
+ 
+	<!-- Hibernate session factory -->
+	<bean id="sessionFactory" class="org.springframework.orm.hibernate3.annotation.AnnotationSessionFactoryBean">
+	<!--  	<bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean"> -->
+		<property name="dataSource">
+			<ref bean="dataSource" />
+		</property>
+ 
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+				<prop key="hibernate.show_sql">true</prop>
+				<prop key="hibernate.hbm2ddl.auto">update</prop> <!-- This propertie allows you to auto-create tables -->
+			</props>
+		</property>
+ 
+		<!-- This is not required as we are using Annotations and we have define a package to Scan -->
+		<!-- 		<property name="mappingResources"> -->
+		<!-- 			<list> -->
+		<!-- 			    <value>hibernate/User.hbm.xml</value> -->
+		<!-- 			</list> -->
+		<!-- 		</property> -->
+		
+		<property name="packagesToScan">
+		    <list>
+				 <value>edu.upf.nets.mercury.pojo</value>    
+			</list>
+		</property>
+ 
+	</bean>
+</beans>

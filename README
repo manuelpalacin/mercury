@@ -1,0 +1,40 @@
+README
+
+This is a J2EE template application structure that combines most of the more useful web technologies. Basically, the project includes:
+-Spring 3 with annotations
+-Struts 2 (with File upload interceptor and Display TLDs)
+-REST Web Services with Jersey (JSON ready)
+-Hibernate 3
+-MySQL database configuration
+-Mongodb NoSQL database configuration
+-Ehcache ready
+-JUnit ready to work with Spring
+-Thread pool
+-Bootstrap HTML5 Responsive template
+
+POM CONFIGURATION
+0. Remember to modify the pom.xml with your current path of the tools.jar from your JDK and servlet-api.jar from Tomcat
+1. Clean the maven project
+2. Convert maven project to WTP Eclipse project to enable the debug inside Eclipse Tomcat. Using the maven goal from the "Run configurations": 
+	eclipse:eclipse -Dwtpversion=2.0
+3. Run Tomcat inside Eclipse and add the project
+
+OPTIONAL
+The project is ready to directly run on Jetty using the following maven goals from the "Run configurations":
+	clean install jetty:run
+	
+MONGO CONFIGURATION
+Using the mongo client (mongo.exe) and with the mongo server running:
+0. To start mongo server you need a data folder to store database: mongod.exe --dbpath "C:\Program Files\mongodb-win32-x86_64-2.2.3\data"
+1. Use the mercury database: >use mercury
+2. Create the admin user to this database: >db.addUser("user","root")
+3. If you want to check the new user: >db.system.users.find();
+
+IMPORTANT
+Do not change the maven dependencies as they have been configured to be compatible between them.
+Be careful with the exclusions.
+
+
+NEXT STEPS
+Include OAuth 2.0
+Include semantic Web capabilities (RDF, OWL...)

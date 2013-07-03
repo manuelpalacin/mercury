@@ -8,7 +8,9 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.index.Index;
 import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Order;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
 
@@ -85,7 +87,7 @@ public class TracerouteDaoImpl implements TracerouteDao {
 		cal.add(Calendar.MONTH, -1);
 		
 		return mongoTemplate.find(
-				new Query( Criteria.where("ip").is(ip2find).
+				new Query( Criteria.where("ip").is(ip2find).						
 						and("timeStamp").gt(cal.getTime()).
 						and("source").is("http://www.team-cymru.org/Services/ip-to-asn.html") ), 
 	            Entity.class);
@@ -97,6 +99,28 @@ public class TracerouteDaoImpl implements TracerouteDao {
 				new Query( Criteria.where("ip").is(ip2find).
 						and("number").is("private") ), 
 	            Entity.class);
+		if(entity!=null){
+			return true;
+		} else {
+			return false;
+		}
+
+	}
+	
+	
+	public boolean isUpdatedPrivateMapping(String ip2find) {
+		
+		Calendar cal = Calendar.getInstance();
+		cal.add(Calendar.MONTH, -1);
+		
+		
+		Entity entity = mongoTemplate.findById(
+				new Query( Criteria.where("ip").is(ip2find).
+						and("timeStamp").gt(cal.getTime()).
+						and("source").is("http://www.team-cymru.org/Services/ip-to-asn.html").
+						and("number").is("private") ).fields().include("_id"), 
+	            Entity.class);
+		
 		if(entity!=null){
 			return true;
 		} else {

@@ -69,4 +69,5 @@ public interface TracerouteDao {
 	
 	public IpGeoMapping getIpGeoMapping(String ip);
 	
+	public boolean isUpdatedPrivateMapping(String ip2find);
 }

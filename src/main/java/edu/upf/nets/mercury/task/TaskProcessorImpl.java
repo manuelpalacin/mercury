@@ -78,18 +78,24 @@ public class TaskProcessorImpl implements TaskProcessor{
 	        	//Here we block taskProcessor for future processings
 				active = true;
 	        	//1. Load incomplete tracerouteIndexes from mongodb
+				log.info("STEP-1");
 	        	loadTracerouteIndexesToProcess();
 	
 	        	if(! traceList.isEmpty()){
 	        		//2. Load ips to process
+	        		log.info("STEP-2");
 	        		loadIpsToProcess();
 		        	//3. Process IPs using Cymru whois service and save new IP mappings
+	        		log.info("STEP-3");
 	        		processIpsCymru();
 	        		//4. Process IPs geo mapping
+	        		log.info("STEP-4");
 	        		processIpGeoMappings();
 	        		//6 Update traceroute indexes to pending
+	        		log.info("STEP-6");
 	        		updateTracerouteIndexesProcessed();
 	        		//7 create, process and save ASTraceroutes for each index
+	        		log.info("STEP-7");
 	        		createASTraceroutes();
 	
 	        	} else {
@@ -102,6 +108,7 @@ public class TaskProcessorImpl implements TaskProcessor{
     		log.info("Other process is still using taskProcessor: "+active);
     	}
         log.info("Cron task finish: "+new Date());
+        log.info("bye");
     }
     
 
@@ -168,7 +175,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 		ips = new ArrayList<String>();
 		geoips = new ArrayList<String>();
 		traceList = new ArrayList<Trace>();
-    	tracerouteIndexes = tracerouteDao.getTracerouteIndexesListToProcess(100);
+    	tracerouteIndexes = tracerouteDao.getTracerouteIndexesListToProcess(10);
     	List<TracerouteIndex> tracerouteIndexesProcessing = new ArrayList<TracerouteIndex>();
     	for (TracerouteIndex tracerouteIndex : tracerouteIndexes) {
 			//1.1 Update tracerouteIndexes
@@ -194,14 +201,16 @@ public class TaskProcessorImpl implements TaskProcessor{
 	
 	//2. Load ips to process
 	private void loadIpsToProcess(){
+		
     	for (Trace trace : traceList) {
     		String ip2find = trace.getHopIp();
+    		
     		//2. Check if the ip is already introduced in mongodb in the last month
     		if(!ip2find.equalsIgnoreCase("destination unreachable")){
-        		if ( (tracerouteDao.getUpdatedIpMappings(ip2find).isEmpty()) && 
-        				(!tracerouteDao.isPrivateIpMapping(ip2find)) ){
+    			if(!tracerouteDao.isUpdatedPrivateMapping(ip2find)){
 	        		//Add ip to process later in 3
-	        		ips.add(ip2find);			        		
+	        		ips.add(ip2find);
+	        		//log.info("TEST: "+ip2find+" "+ i++);
         		} else{
         			//log.info("Ip already mapped in the database: "+ip2find);
         		}
@@ -219,6 +228,7 @@ public class TaskProcessorImpl implements TaskProcessor{
         		*/
         	}
 		}
+
 	}
 	
 	//3. Process IPs using Cymru whois service and save new IP mappings
@@ -321,7 +331,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 		@Override
 		public void run() {
     		try {
-	    		log.info("Processing astraceroute --> "+tracerouteIndex.getTracerouteGroupId());
+	    		//log.info("Processing astraceroute --> "+tracerouteIndex.getTracerouteGroupId());
 	    		ASTraceroute asTraceroute = new ASTraceroute();
 	    		ASTracerouteStat asTracerouteStat = new ASTracerouteStat();
 	    		String tracerouteGroupId = null;
@@ -528,7 +538,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 	    		tracerouteDao.addASTraceroute(asTraceroute);
 	    		tracerouteStatsDao.addASTracerouteStat(asTracerouteStat);
 	    		
-	    		log.info("FINISH processing astraceroute --> "+tracerouteIndex.getTracerouteGroupId());
+	    		//log.info("FINISH processing astraceroute --> "+tracerouteIndex.getTracerouteGroupId());
 			
 			} catch(Exception e){
 				e.printStackTrace();

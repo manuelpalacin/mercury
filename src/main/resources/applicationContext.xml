@@ -54,7 +54,7 @@
  
  	<task:annotation-driven/>
  	<task:scheduled-tasks>
-	    <task:scheduled ref="taskProcessor" method="process" fixed-delay="60000" />
+	    <task:scheduled ref="taskProcessor" method="process" fixed-delay="10000" />
 <!-- 	    <task:scheduled ref="taskProcessor" method="process" cron="2 * * * * MON-FRI"/> -->
 	</task:scheduled-tasks>
  	

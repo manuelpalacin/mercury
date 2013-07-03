@@ -175,7 +175,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 		ips = new ArrayList<String>();
 		geoips = new ArrayList<String>();
 		traceList = new ArrayList<Trace>();
-    	tracerouteIndexes = tracerouteDao.getTracerouteIndexesListToProcess(10);
+    	tracerouteIndexes = tracerouteDao.getTracerouteIndexesListToProcess(1);
     	List<TracerouteIndex> tracerouteIndexesProcessing = new ArrayList<TracerouteIndex>();
     	for (TracerouteIndex tracerouteIndex : tracerouteIndexes) {
 			//1.1 Update tracerouteIndexes
@@ -331,7 +331,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 		@Override
 		public void run() {
     		try {
-	    		//log.info("Processing astraceroute --> "+tracerouteIndex.getTracerouteGroupId());
+	    		log.info("Processing astraceroute --> "+tracerouteIndex.getTracerouteGroupId());
 	    		ASTraceroute asTraceroute = new ASTraceroute();
 	    		ASTracerouteStat asTracerouteStat = new ASTracerouteStat();
 	    		String tracerouteGroupId = null;
@@ -340,6 +340,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 	    		//PART 1 
 	    		//We load the ASTraceroute with entities for each hop
 	    		boolean done = false;
+	    		log.info("START TRACES STEP");
 	    		for (Trace trace : tracesMapped) {
 	    			//taskExecutor.set
 	    			ASHop asHop = new ASHop();
@@ -379,6 +380,10 @@ public class TaskProcessorImpl implements TaskProcessor{
 		    			done = true;
 	    			}
 				}
+	    		log.info("END TRACES STEP");
+	    		
+	    		
+	    		log.info("START ASNUM");
 	    		//Possible BUG
 	    		//Now we set information about the asNumbers and asNames, this is dangerous cause maybe entity(0) has NO AS number
 	    		if ( (!tracerouteDao.getLastIpMappings(asTraceroute.getOriginIp()).isEmpty()) && 
@@ -403,10 +408,11 @@ public class TaskProcessorImpl implements TaskProcessor{
 					asTraceroute.setDestinationAS("Not found");
 					asTraceroute.setDestinationASName("Not found");
 	    		}
-	    		
+	    		log.info("END ASNUM");
 				
 				
 	    		//PART 2
+	    		log.info("START ASRELS");
 	    		//Now we add the AS relationships inspecting hop by hop
 	    		ASTracerouteRelationships asTracerouteRelationships = new ASTracerouteRelationships();
 	    		asTracerouteRelationships.setTracerouteGroupId(tracerouteGroupId);
@@ -422,7 +428,10 @@ public class TaskProcessorImpl implements TaskProcessor{
 	    				break;
 	    			}
 				}
+	    		log.info("END ASRELS");
 	    		
+	    		
+	    		log.info("START ASHOPS");
 	    		//We inspect hop by hop
 	    		for (ASHop asHopAux : asTraceroute.getAsHops()) {
 	    			if(lastAsHop != null) {
@@ -523,8 +532,10 @@ public class TaskProcessorImpl implements TaskProcessor{
 	    				lastAsHop = asHopAux;
 	    			}
 				}
+	    		log.info("END ASHOPS");
 	    		
 	    		//PART 3
+	    		log.info("START STATS");
 	    		//Now we add the Stats of the traceroute
 	    		asTracerouteStat = getASTracerouteStat( tracerouteGroupId, asTraceroute, asTracerouteRelationships );
 	    		
@@ -537,8 +548,9 @@ public class TaskProcessorImpl implements TaskProcessor{
 	    		asTraceroute.setTimeStamp(new Date());
 	    		tracerouteDao.addASTraceroute(asTraceroute);
 	    		tracerouteStatsDao.addASTracerouteStat(asTracerouteStat);
+	    		log.info("END STATS");
 	    		
-	    		//log.info("FINISH processing astraceroute --> "+tracerouteIndex.getTracerouteGroupId());
+	    		log.info("FINISH processing astraceroute --> "+tracerouteIndex.getTracerouteGroupId());
 			
 			} catch(Exception e){
 				e.printStackTrace();

@@ -33,6 +33,10 @@ public class Entity implements Cloneable{
 	private List<String> bgpPrefixes;
 	private List<Entity> participants;
 	private Map<String, Entity> participantsMap;
+	private long rangeLow;
+	private long rangeHigh;
+	private long numRangeIps;
+	private long ipNum;
 	
 
     @Id
@@ -153,6 +157,32 @@ public class Entity implements Cloneable{
 		getParticipantsMap().put(id, entity);
 	}
 	
+	public long getRangeLow() {
+		return rangeLow;
+	}
+	public void setRangeLow(long rangeLow) {
+		this.rangeLow = rangeLow;
+	}
+	public long getRangeHigh() {
+		return rangeHigh;
+	}
+	public void setRangeHigh(long rangeHigh) {
+		this.rangeHigh = rangeHigh;
+	}
+	public long getNumRangeIps() {
+		return numRangeIps;
+	}
+	public void setNumRangeIps(long numRangeIps) {
+		this.numRangeIps = numRangeIps;
+	}
+	
+	
+	public long getIpNum() {
+		return ipNum;
+	}
+	public void setIpNum(long ipNum) {
+		this.ipNum = ipNum;
+	}
 	public String toString(){
 		String bgpPrefixes = "";
 		for (String bgpPrexix : getBgpPrefixes()) {
@@ -160,6 +190,32 @@ public class Entity implements Cloneable{
 		}
 		
 		return getIp()+"\t"+getServerName()+"\t"+getSource()+"\t"+getType()+"\t"+getNumber()+"\t"+getName()+"\t"+getLocation()+"\t"+getEmail()+"\t"+getWeb()+"\t"+bgpPrefixes;
+	}
+	
+	public String getAsNumber() {
+		if (this.type.equals("AS")) {
+			return this.number;
+		}
+		else if(this.type.equals("IXP")) {
+			return this.number;
+		}
+		else if(this.type.equals("AS in IXP")) {
+			if (this.participants.size() != 1) {
+				return null;
+			}
+			return this.participants != null ? this.participants.get(0) != null ? this.participants.get(0).getNumber() : null : null;
+		}
+		else return null;
+	}
+	
+	
+	public boolean isSameAs(Entity entity) {
+		String as1 = this.getAsNumber();
+		String as2 = entity.getAsNumber();
+		
+		if(null == as1) return false;
+		else if(null == as2) return false;
+		else return as1.equals(as2);
 	}
 	
 	public Object clone(){

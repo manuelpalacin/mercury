@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
@@ -25,6 +26,8 @@ import edu.upf.nets.mercury.pojo.TracerouteIndex;
 
 @Repository(value="tracerouteDao")
 public class TracerouteDaoImpl implements TracerouteDao {
+	
+	private static final Logger log = Logger.getLogger(TracerouteDaoImpl.class.getName());
 	/*
 	“save” is means “insert it if record is not exists” and “update it if record is existed”, or simply saveOrUpdate().
 	“insert” is means “insert it if record is not exits” and “ignore it if record is existed”.
@@ -58,6 +61,7 @@ public class TracerouteDaoImpl implements TracerouteDao {
 
 	@Override
 	public List<Trace> getTraceListByTracerouteGroupId(String tracerouteGroupId) {
+		mongoTemplate.indexOps("traces").ensureIndex(new Index("timeStamp", Order.ASCENDING));
 		return mongoTemplate.find(
 				new Query( Criteria.where("tracerouteGroupId").is(tracerouteGroupId) ), 
 	            Trace.class);
@@ -80,64 +84,121 @@ public class TracerouteDaoImpl implements TracerouteDao {
 	            Entity.class);
 	}
 	
+//	@Override
+//	public List<Entity> getUpdatedIpMappings(String ip2find) {
+//		//We only accept mappings of the last month
+//		Calendar cal = Calendar.getInstance();
+//		cal.add(Calendar.MONTH, -1);
+//		
+//		return mongoTemplate.find(
+//				new Query( Criteria.where("ip").is(ip2find).						
+//						and("timeStamp").gt(cal.getTime()).
+//						and("source").is("http://www.team-cymru.org/Services/ip-to-asn.html") ), 
+//	            Entity.class);
+//	}
+
+//	@Override
+//	public boolean isPrivateIpMapping(String ip2find) {
+//		Entity entity = mongoTemplate.findOne(
+//				new Query( Criteria.where("ip").is(ip2find).
+//						and("number").is("private") ), 
+//	            Entity.class);
+//		if(entity!=null){
+//			return true;
+//		} else {
+//			return false;
+//		}
+//
+//	}
+	
+	
 	@Override
-	public List<Entity> getUpdatedIpMappings(String ip2find) {
-		//We only accept mappings of the last month
+	public boolean isUpdatedMapping(long ip2find) {
+
+//		if (((ip2find >> 24) & 0xFF) == 10) {
+//			log.warning("Private IP!!!");
+//		}
+		
 		Calendar cal = Calendar.getInstance();
 		cal.add(Calendar.MONTH, -1);
-		
-		return mongoTemplate.find(
-				new Query( Criteria.where("ip").is(ip2find).						
-						and("timeStamp").gt(cal.getTime()).
-						and("source").is("http://www.team-cymru.org/Services/ip-to-asn.html") ), 
-	            Entity.class);
-	}
 
-	@Override
-	public boolean isPrivateIpMapping(String ip2find) {
-		Entity entity = mongoTemplate.findOne(
-				new Query( Criteria.where("ip").is(ip2find).
-						and("number").is("private") ), 
-	            Entity.class);
-		if(entity!=null){
-			return true;
-		} else {
-			return false;
-		}
+		mongoTemplate.indexOps("entities").ensureIndex(new Index("timeStamp", Order.ASCENDING));
+		mongoTemplate.indexOps("entities").ensureIndex(new Index("source", Order.ASCENDING));
+		mongoTemplate.indexOps("entities").ensureIndex(new Index("rangeLow", Order.ASCENDING));
+		mongoTemplate.indexOps("entities").ensureIndex(new Index("rangeHigh", Order.ASCENDING));
+		mongoTemplate.indexOps("entities").ensureIndex(new Index("numRangeIps", Order.ASCENDING));
+		mongoTemplate.indexOps("entities").ensureIndex(new Index("ipNum", Order.ASCENDING));
 
+		Query q = new Query(Criteria.where("timeStamp").gt(cal.getTime()).
+				and("rangeLow").lte(ip2find).
+				and("rangeHigh").gte(ip2find).
+				and("source").is("http://www.team-cymru.org/Services/ip-to-asn.html")
+				);
+
+		q.with(new Sort(Sort.Direction.ASC, "numRangeIps"));
+		q.fields().include("_id");
+		Entity entity = mongoTemplate.findOne( q, Entity.class);
+
+		return entity != null;
 	}
 	
 	
-	public boolean isUpdatedPrivateMapping(String ip2find) {
-		
-		Calendar cal = Calendar.getInstance();
-		cal.add(Calendar.MONTH, -1);
-		
-		
-		Entity entity = mongoTemplate.findById(
-				new Query( Criteria.where("ip").is(ip2find).
-						and("timeStamp").gt(cal.getTime()).
-						and("source").is("http://www.team-cymru.org/Services/ip-to-asn.html").
-						and("number").is("private") ).fields().include("_id"), 
-	            Entity.class);
-		
-		if(entity!=null){
-			return true;
-		} else {
-			return false;
-		}
-	}
 	
+//	@Override
+//	public List<Entity> getLastIpMappings(String ip2find) {
+//		List<Entity> entities = new ArrayList<Entity>();
+//		
+//		Entity entityCymru;
+//		if( (entityCymru = mongoTemplate.findOne(
+//				new Query( Criteria.where("ip").is(ip2find).
+//						and("source").is("http://www.team-cymru.org/Services/ip-to-asn.html")).
+//						with(new Sort(Sort.Direction.ASC, "timeStamp")), 
+//				Entity.class)) != null){
+//			entities.add(entityCymru);
+//		}
+//		
+//		Entity entityEuroix;
+//		if( (entityEuroix = mongoTemplate.findOne(
+//				new Query( Criteria.where("ip").is(ip2find).
+//						and("source").is("https://www.euro-ix.net")).
+//						with(new Sort(Sort.Direction.ASC, "timeStamp")), 
+//				Entity.class)) != null ){
+//			entities.add(entityEuroix);
+//		}
+//		
+//		Entity entityPeeringdb;
+//		if( (entityPeeringdb = mongoTemplate.findOne(
+//				new Query( Criteria.where("ip").is(ip2find).
+//						and("source").is("https://www.peeringdb.com")).
+//						with(new Sort(Sort.Direction.ASC, "timeStamp")), 
+//				Entity.class)) != null ){
+//			entities.add(entityPeeringdb);
+//		}
+//		
+//		Entity entityManual;
+//		if( (entityManual = mongoTemplate.findOne(
+//				new Query( Criteria.where("ip").is(ip2find).
+//						and("source").is("manual")).
+//						with(new Sort(Sort.Direction.ASC, "timeStamp")), 
+//				Entity.class)) != null){
+//			entities.add(entityManual);
+//		}
+//		
+//		return entities;
+//	}
 	
 	@Override
 	public List<Entity> getLastIpMappings(String ip2find) {
 		List<Entity> entities = new ArrayList<Entity>();
 		
+		long ip = convertToDecimalIp(ip2find);
+		
 		Entity entityCymru;
 		if( (entityCymru = mongoTemplate.findOne(
-				new Query( Criteria.where("ip").is(ip2find).
+				new Query( Criteria.where("rangeLow").lte(ip).
+						and("rangeHigh").gte(ip).
 						and("source").is("http://www.team-cymru.org/Services/ip-to-asn.html")).
-						with(new Sort(Sort.Direction.ASC, "timeStamp")), 
+						with(new Sort(Sort.Direction.ASC, "numRangeIps")), 
 				Entity.class)) != null){
 			entities.add(entityCymru);
 		}
@@ -146,7 +207,7 @@ public class TracerouteDaoImpl implements TracerouteDao {
 		if( (entityEuroix = mongoTemplate.findOne(
 				new Query( Criteria.where("ip").is(ip2find).
 						and("source").is("https://www.euro-ix.net")).
-						with(new Sort(Sort.Direction.ASC, "timeStamp")), 
+						with(new Sort(Sort.Direction.DESC, "timeStamp")), 
 				Entity.class)) != null ){
 			entities.add(entityEuroix);
 		}
@@ -155,7 +216,7 @@ public class TracerouteDaoImpl implements TracerouteDao {
 		if( (entityPeeringdb = mongoTemplate.findOne(
 				new Query( Criteria.where("ip").is(ip2find).
 						and("source").is("https://www.peeringdb.com")).
-						with(new Sort(Sort.Direction.ASC, "timeStamp")), 
+						with(new Sort(Sort.Direction.DESC, "timeStamp")), 
 				Entity.class)) != null ){
 			entities.add(entityPeeringdb);
 		}
@@ -164,12 +225,13 @@ public class TracerouteDaoImpl implements TracerouteDao {
 		if( (entityManual = mongoTemplate.findOne(
 				new Query( Criteria.where("ip").is(ip2find).
 						and("source").is("manual")).
-						with(new Sort(Sort.Direction.ASC, "timeStamp")), 
+						with(new Sort(Sort.Direction.DESC, "timeStamp")), 
 				Entity.class)) != null){
 			entities.add(entityManual);
 		}
 		
 		return entities;
+		
 	}
 
 	@Override
@@ -186,6 +248,19 @@ public class TracerouteDaoImpl implements TracerouteDao {
 	}
 
 	@Override
+	public ASTraceroute getASTracerouteListByTracerouteGroupIdReduced(
+			String tracerouteGroupId) {
+		
+		Query query = new Query(Criteria.where("tracerouteGroupId").is(tracerouteGroupId));
+		query.fields().
+			include("originIp").include("originCity").include("originCountry").include("originAS").include("originASName").
+			include("destination").include("destinationIp").include("destinationCity").include("destinationCountry").include("destinationAS").include("destinationASName");
+		
+		return mongoTemplate.findOne( query, ASTraceroute.class);
+	}
+	
+	
+	@Override
 	public void addTracerouteIndex(TracerouteIndex tracerouteIndex) {
 		mongoTemplate.save(tracerouteIndex);
 		
@@ -200,6 +275,9 @@ public class TracerouteDaoImpl implements TracerouteDao {
 
 	@Override
 	public List<TracerouteIndex> getTracerouteIndexesListToProcess(int limit) {
+		
+		mongoTemplate.indexOps("tracerouteindexes").ensureIndex(new Index("timeStamp", Order.ASCENDING));
+		mongoTemplate.indexOps("tracerouteindexes").ensureIndex(new Index("completed", Order.ASCENDING));
 		Query query = new Query();
 		query.limit(limit).with(new Sort(Sort.Direction.ASC, "timeStamp"));
 		query.addCriteria(Criteria.where("completed").is("INCOMPLETED"));
@@ -315,5 +393,56 @@ public class TracerouteDaoImpl implements TracerouteDao {
 	}
 
 
+	
+	private long[] getRange(String ipWithMask){
+		
+		String[] ip = ipWithMask.split("/");
+		String[] ipPosition = ip[0].split("\\.");	
+		//Step 0. Check only IPv4 addresses
+		if (ipPosition.length == 4){
+			// Step 1. Convert IPs into ints (32 bits).
+			long addr = (( Integer.parseInt(ipPosition[0]) << 24 ) & 0xFF000000) | 
+					(( Integer.parseInt(ipPosition[1]) << 16 ) & 0xFF0000) | 
+					(( Integer.parseInt(ipPosition[2]) << 8 ) & 0xFF00) | 
+					( Integer.parseInt(ipPosition[3]) & 0xFF);
+			// Step 2. Get CIDR mask
+			int mask = (-1) << (32 - Integer.parseInt(ip[1]));
+			// Step 3. Find lowest IP address
+			long rangeLow = addr & mask;
+			// Step 4. Find highest IP address
+			long rangeHigh = rangeLow + (~mask);
+			// Step 5. NUmber of ips in range
+			long numRangeIps = rangeHigh - rangeLow;
+			long[] data = {addr,rangeLow,rangeHigh,numRangeIps};
+			return data;
+			
+		} else {
+			long[] data = {0,0,0,0};
+			return data;
+		}
+	}
+	
+//	private long convertToDecimalIp(String ip){
+//		String[] ipPosition = ip.split("\\.");	
+//		if (ipPosition.length == 4){
+//			long addr = (( Long.parseLong(ipPosition[0]) << 24 ) & 0xFF000000) | 
+//					(( Long.parseLong(ipPosition[1]) << 16 ) & 0xFF0000) | 
+//					(( Long.parseLong(ipPosition[2]) << 8 ) & 0xFF00) | 
+//					( Long.parseLong(ipPosition[3]) & 0xFF);
+//			return addr;
+//		} else {
+//			return 0;
+//		}
+//	}
+	
+	private long convertToDecimalIp(String ip) { 
+        String[] addrArray = ip.split("\\.");
+        long num = 0; 
+        for (int i = 0; i < addrArray.length; i++) { 
+            int power = 3 - i;
+            num += ((Integer.parseInt(addrArray[i]) % 256 * Math.pow(256, power))); 
+        } 
+        return num; 
+    }
 
 }

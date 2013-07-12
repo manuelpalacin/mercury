@@ -21,6 +21,8 @@ public interface TracerouteManager {
 	
 	public ASTraceroute getASTracerouteListByTracerouteGroupId(String tracerouteGroupId); 
 	
+	public ASTraceroute getASTracerouteListByTracerouteGroupIdReduced(String tracerouteGroupId);
+	
 	public void addTracerouteIndex(TracerouteIndex tracerouteIndex);
 	
 	public List<TracerouteIndex> getTracerouteIndexes(String tracerouteGroupId);

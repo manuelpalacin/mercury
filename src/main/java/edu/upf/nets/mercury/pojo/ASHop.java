@@ -48,6 +48,37 @@ public class ASHop {
 	public void setIpGeoMapping(IpGeoMapping ipGeoMapping) {
 		this.ipGeoMapping = ipGeoMapping;
 	}
-	
+	public Entity getKnownEntity() {
+		if(null == this.entities) return null;
+		Entity entityAs = null;
+		Entity entityIxp = null;
+		Entity entityAsInIxp = null;
+		for(Entity entity : this.entities){
+			if(entity.getAsNumber() != null){
+				if(entity.getType().equals("AS") && (entityAs == null)) entityAs = entity; 
+				else if(entity.getType().equals("IXP") && (entityIxp == null)) entityIxp = entity; 
+				else if(entity.getType().equals("AS in IXP") && (entityAsInIxp == null)) entityAsInIxp = entity; 
+			}
+		}
+		if(entityAsInIxp != null) return entityAsInIxp;
+		else if(entityIxp != null) return entityIxp;
+		else return entityAs;
+	}
 
+	public Entity getAnyEntity() {
+		if(null == this.entities) return null;
+		else if(this.entities.isEmpty()) return null;
+		else return this.entities.get(0);
+	}
+	
+	// Private methods.
+
+	private boolean isNumeric(String str) {
+		try {
+			Integer.parseInt(str);
+		} catch (NumberFormatException nfe) {
+			return false;
+		}
+		return true;
+	}	
 }

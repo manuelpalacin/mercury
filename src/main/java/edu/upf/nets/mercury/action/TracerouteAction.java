@@ -71,7 +71,7 @@ public class TracerouteAction extends ActionSupport{
 			//This function copy properties from an object to another object
 			org.apache.commons.beanutils.BeanUtils.copyProperties(tracerouteIndexInfo, tracerouteIndex);
 			
-			ASTraceroute asTraceroute =  tracerouteManager.getASTracerouteListByTracerouteGroupId(tracerouteIndexInfo.getTracerouteGroupId());
+			ASTraceroute asTraceroute =  tracerouteManager.getASTracerouteListByTracerouteGroupIdReduced(tracerouteIndexInfo.getTracerouteGroupId());
 
 			if (asTraceroute!=null){
 				tracerouteIndexInfo.setOriginIp(asTraceroute.getOriginIp());

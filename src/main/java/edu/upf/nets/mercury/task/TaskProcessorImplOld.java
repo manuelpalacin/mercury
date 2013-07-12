@@ -77,8 +77,9 @@ public class TaskProcessorImplOld implements TaskProcessor{
 	        		String ip2find = trace.getHopIp();
 	        		//2. Check if the ip is already introduced in mongodb in the last month
 	        		if(!ip2find.equalsIgnoreCase("destination unreachable")){
-		        		if ( (tracerouteDao.getUpdatedIpMappings(ip2find).isEmpty()) && 
-		        				(!tracerouteDao.isPrivateIpMapping(ip2find)) ){
+	        			if(tracerouteDao.isUpdatedAndNotPrivateMapping(convertToDecimalIp(ip2find))){
+//		        		if ( (tracerouteDao.getUpdatedIpMappings(ip2find).isEmpty()) && 
+//		        				(!tracerouteDao.isPrivateIpMapping(ip2find)) ){
 			        		//Add ip to process later in 5
 			        		ips.add(ip2find);			        		
 		        		} else{
@@ -317,6 +318,19 @@ public class TaskProcessorImplOld implements TaskProcessor{
 			return false;
 		}
 		return true;
+	}
+	
+	private long convertToDecimalIp(String ip){
+		String[] ipPosition = ip.split("\\.");	
+		if (ipPosition.length == 4){
+			long addr = (( Integer.parseInt(ipPosition[0]) << 24 ) & 0xFF000000) | 
+					(( Integer.parseInt(ipPosition[1]) << 16 ) & 0xFF0000) | 
+					(( Integer.parseInt(ipPosition[2]) << 8 ) & 0xFF00) | 
+					( Integer.parseInt(ipPosition[3]) & 0xFF);
+			return addr;
+		} else {
+			return 0;
+		}
 	}
 
 }

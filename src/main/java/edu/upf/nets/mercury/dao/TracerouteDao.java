@@ -29,15 +29,17 @@ public interface TracerouteDao {
 	
 	public List<Entity> getIpMappings(String ip2find);
 	
-	public List<Entity> getUpdatedIpMappings(String ip2find);
+	//public List<Entity> getUpdatedIpMappings(String ip2find);
 	
-	public boolean isPrivateIpMapping(String ip2find);
+	//public boolean isPrivateIpMapping(String ip2find);
 	
 	public List<Entity> getLastIpMappings(String ip2find);
 	
 	public void addASTraceroute(ASTraceroute asTraceroute);
 	
 	public ASTraceroute getASTracerouteListByTracerouteGroupId(String tracerouteGroupId); 
+	
+	public ASTraceroute getASTracerouteListByTracerouteGroupIdReduced(String tracerouteGroupId);
 	
 	public void addTracerouteIndex(TracerouteIndex tracerouteIndex);
 	
@@ -68,6 +70,7 @@ public interface TracerouteDao {
 	public void addIpGeoMapping(IpGeoMapping ipGeoMapping);
 	
 	public IpGeoMapping getIpGeoMapping(String ip);
+
 	
-	public boolean isUpdatedPrivateMapping(String ip2find);
+	public boolean isUpdatedMapping(long ip2find);
 }

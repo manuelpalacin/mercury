@@ -48,6 +48,12 @@ public class TracerouteManagerImpl implements TracerouteManager {
 			String tracerouteGroupId) {
 		return tracerouteDao.getASTracerouteListByTracerouteGroupId(tracerouteGroupId);
 	}
+	
+	@Override
+	public ASTraceroute getASTracerouteListByTracerouteGroupIdReduced(
+			String tracerouteGroupId) {
+		return tracerouteDao.getASTracerouteListByTracerouteGroupIdReduced(tracerouteGroupId);
+	}
 
 	@Override
 	public void addTracerouteIndex(TracerouteIndex tracerouteIndex) {

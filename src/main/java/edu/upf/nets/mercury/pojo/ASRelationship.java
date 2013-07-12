@@ -24,6 +24,9 @@ public class ASRelationship {
 	private Date timeStamp;
 	private Date lastUpdate;
 	private Overlap overlap;
+	private int missingHops;
+	private String ixpName;
+	private String ixp;
 	
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -99,6 +102,24 @@ public class ASRelationship {
 	}
 	public void setOverlap(Overlap overlap) {
 		this.overlap = overlap;
+	}
+	public int getMissingHops() {
+		return missingHops;
+	}
+	public void setMissingHops(int missingHops) {
+		this.missingHops = missingHops;
+	}
+	public String getIxpName() {
+		return ixpName;
+	}
+	public void setIxpName(String ixpName) {
+		this.ixpName = ixpName;
+	}
+	public String getIxp() {
+		return ixp;
+	}
+	public void setIxp(String ixp) {
+		this.ixp = ixp;
 	}
 	
 	

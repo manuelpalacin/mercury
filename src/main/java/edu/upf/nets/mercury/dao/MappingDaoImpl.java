@@ -64,6 +64,11 @@ public class MappingDaoImpl implements MappingDao {
 			// Now we create the bulk query for the whois server
 			String query = "";
 			for (String ip : ips) {
+				
+	    		if(ip.equals("193.105.232.2")){
+	    			log.warning("IP IXP!!!");
+	    		}
+	    		
 				query = query + "\n" + ip;
 			}
 			query = "begin\nverbose" + query + "\nend\n";
@@ -106,15 +111,23 @@ public class MappingDaoImpl implements MappingDao {
 							entity.setName(params[6].trim());
 							entity.setSource("http://www.team-cymru.org/Services/ip-to-asn.html");
 							entity.setType("AS");
+							long[] range = getRange(params[2].trim());
+							entity.setIpNum(range[0]);
+							entity.setRangeLow(range[1]);
+							entity.setRangeHigh(range[2]);
+							entity.setNumRangeIps(range[3]);
+							
 							entities.addEntity(entity);
 						}
 					}
 				}
 				return entities;
+			} else {
+				log.info("Problems with team CYMRU! Maybe we have exceeded the limit");
 			}
 
 		} catch (IOException e) {
-			//log.info("Error connecting to the whois server\n" + e.toString());
+			log.info("Error connecting to the whois server\n" + e.toString());
 			return null;
 		}
 		
@@ -221,4 +234,70 @@ public class MappingDaoImpl implements MappingDao {
 		return ipGeoMapping;
 	}
 
+	
+//	private long[] getRange(String ipWithMask){
+//		
+//		String[] ip = ipWithMask.split("/");
+//		String[] ipPosition = ip[0].split("\\.");	
+//		//Step 0. Check only IPv4 addresses
+//		if (ipPosition.length == 4){
+//			// Step 1. Convert IPs into ints (32 bits).
+//			long addr = (( Long.parseLong(ipPosition[0]) << 24 ) & 0xFF000000) | 
+//					(( Long.parseLong(ipPosition[1]) << 16 ) & 0xFF0000) | 
+//					(( Long.parseLong(ipPosition[2]) << 8 ) & 0xFF00) | 
+//					( Long.parseLong(ipPosition[3]) & 0xFF);
+//			// Step 2. Get CIDR mask
+//			int mask = (-1) << (32 - Integer.parseInt(ip[1]));
+//			// Step 3. Find lowest IP address
+//			long rangeLow = addr & mask;
+//			// Step 4. Find highest IP address
+//			long rangeHigh = rangeLow + (~mask);
+//			// Step 5. NUmber of ips in range
+//			long numRangeIps = rangeHigh - rangeLow;
+//			long[] data = {addr,rangeLow,rangeHigh,numRangeIps};
+//			return data;
+//			
+//		} else {
+//			log.info("Error for: "+ipWithMask);
+//			long[] data = {0,0,0,0};
+//			return data;
+//		}
+//	}
+	
+
+	
+	
+	private long[] getRange(String ipWithMask){
+		
+		String[] ip = ipWithMask.split("/");
+		String[] ipPosition = ip[0].split("\\.");	
+		//Step 0. Check only IPv4 addresses
+		if (ipPosition.length == 4){
+			// Step 1. Convert IPs into ints (32 bits).
+	        long addr = 0; 
+	        for (int i = 0; i < ipPosition.length; i++) { 
+	            int power = 3 - i;
+	            addr += ((Integer.parseInt(ipPosition[i]) % 256 * Math.pow(256, power))); 
+	        } 
+			// Step 2. Get CIDR mask
+			int mask = (-1) << (32 - Integer.parseInt(ip[1]));
+			// Step 3. Find lowest IP address
+			long rangeLow = addr & mask;
+			// Step 4. Find highest IP address
+			long rangeHigh = rangeLow + (~mask);
+			// Step 5. NUmber of ips in range
+			long numRangeIps = rangeHigh - rangeLow;
+			long[] data = {addr,rangeLow,rangeHigh,numRangeIps};
+			return data;
+			
+		} else {
+			log.info("Error for: "+ipWithMask);
+			long[] data = {0,0,0,0};
+			return data;
+		}
+	}
+	
+	
+	
+	
 }

@@ -27,6 +27,8 @@ public class ASRelationship {
 	private int missingHops;
 	private String ixpName;
 	private String ixp;
+	private boolean isIxp;
+	private boolean isComplete;
 	
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -120,6 +122,18 @@ public class ASRelationship {
 	}
 	public void setIxp(String ixp) {
 		this.ixp = ixp;
+	}
+	public boolean isIxp() {
+		return isIxp;
+	}
+	public void setIxp(boolean isIxp) {
+		this.isIxp = isIxp;
+	}
+	public boolean isComplete() {
+		return isComplete;
+	}
+	public void setComplete(boolean isComplete) {
+		this.isComplete = isComplete;
 	}
 	
 	

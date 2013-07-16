@@ -64,10 +64,6 @@ public class MappingDaoImpl implements MappingDao {
 			// Now we create the bulk query for the whois server
 			String query = "";
 			for (String ip : ips) {
-				
-	    		if(ip.equals("193.105.232.2")){
-	    			log.warning("IP IXP!!!");
-	    		}
 	    		
 				query = query + "\n" + ip;
 			}

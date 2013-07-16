@@ -186,7 +186,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 		ips = new ArrayList<String>();
 		geoips = new ArrayList<String>();
 		traceList = new ArrayList<Trace>();
-    	tracerouteIndexes = tracerouteDao.getTracerouteIndexesListToProcess(10); //Number of TR to process
+    	tracerouteIndexes = tracerouteDao.getTracerouteIndexesListToProcess(100); //Number of TR to process
     	List<TracerouteIndex> tracerouteIndexesProcessing = new ArrayList<TracerouteIndex>();
     	for (TracerouteIndex tracerouteIndex : tracerouteIndexes) {
 			//1.1 Update tracerouteIndexes
@@ -223,10 +223,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 //    		tracerouteDao.isUpdatedAndNotPrivateMapping(convertToDecimalIp(ip2find) );
 //    		Date end = new Date();
 //    		timeQuery += end.getTime() - start.getTime();
-    		
-    		if(ip2find.equals("193.105.232.2")){
-    			log.warning("IP IXP!!!");
-    		}
+    	
     		
     		//2. Check if the ip is already introduced in mongodb in the last month
     		if(!ip2find.equalsIgnoreCase("destination unreachable")){
@@ -432,6 +429,9 @@ public class TaskProcessorImpl implements TaskProcessor{
 	    		//log.info("START ASNUM");
 	    		//Possible BUG
 	    		//Now we set information about the asNumbers and asNames, this is dangerous cause maybe entity(0) has NO AS number
+	    		if(null == asTraceroute.getOriginIp()){
+	    			log.warning("IP is null");
+	    		}
 	    		if ( (!tracerouteDao.getLastIpMappings(asTraceroute.getOriginIp()).isEmpty()) && 
 	    				tracerouteDao.isUpdatedMapping(convertToDecimalIp(asTraceroute.getOriginIp())) ){
 	    			try {
@@ -462,7 +462,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 	    		//Now we add the AS relationships inspecting hop by hop
 	    		ASTracerouteRelationships asTracerouteRelationships = new ASTracerouteRelationships();
 	    		asTracerouteRelationships.setTracerouteGroupId(tracerouteGroupId);
-	    		ASRelationship asRelationship;
+	    		ASRelationship asRelationship = null;
 	    		ASHop prevHop = null; // The previous hop.
 	    		ASHop prevKnownHop = null; // The previous known hop.
 	    		Entity prevEntity = null; 
@@ -505,12 +505,24 @@ public class TaskProcessorImpl implements TaskProcessor{
 	    					if(prevEntity.isSameAs(currEntity)) {
 	    						// The current hop AS is the same as the previous known AS.
 	    						asRelationship = this.createSameAsRelationship(prevHop, prevEntity, currHop, currEntity, missingHops);
-	    						asTracerouteRelationships.addAsRelationship(asRelationship);
+	    						if(asRelationship.isComplete()) {
+	    							asTracerouteRelationships.addAsRelationship(asRelationship);
+	    						}
 	    					}
 	    					else {
 	    						// The current hop AS is different from the previous known AS.
-	    						asRelationship = this.createDiffAsRelationship(prevHop, prevEntity, currHop, currEntity, missingHops);
-	    						asTracerouteRelationships.addAsRelationship(asRelationship);
+
+	    						// If the previous relationship is an IXP incomplete relationship.
+	    						if(this.isIxpAndIncompleteRelationship(asRelationship)) {
+	    							asRelationship = this.completeIxpAsRelationship(asRelationship, prevHop, prevEntity, currHop, currEntity, missingHops);
+	    						}
+	    						else {
+		    						asRelationship = this.createDiffAsRelationship(prevHop, prevEntity, currHop, currEntity, missingHops);
+	    						}
+	    						
+	    						if(asRelationship.isComplete()) {
+	    							asTracerouteRelationships.addAsRelationship(asRelationship);
+	    						}	
 	    					}
 	    				}
 	    				else {
@@ -523,12 +535,24 @@ public class TaskProcessorImpl implements TaskProcessor{
 		    					if(prevKnownEntity.isSameAs(currEntity)) {
 		    						// The current hop AS is the same as the previous known AS.
 		    						asRelationship = this.createSameAsRelationship(prevKnownHop, prevKnownEntity, currHop, currEntity, missingHops);
-		    						asTracerouteRelationships.addAsRelationship(asRelationship);
+		    						if(asRelationship.isComplete()) {
+		    							asTracerouteRelationships.addAsRelationship(asRelationship);
+		    						}
 		    					}
 		    					else {
 		    						// The current hop AS is different from the previous known AS.
-		    						asRelationship = this.createDiffAsRelationship(prevKnownHop, prevKnownEntity, currHop, currEntity, missingHops);
-		    						asTracerouteRelationships.addAsRelationship(asRelationship);
+		    						
+		    						// If the previous relationship is an IXP incomplete relationship.
+		    						if(this.isIxpAndIncompleteRelationship(asRelationship)) {
+		    							asRelationship = this.completeIxpAsRelationship(asRelationship, prevKnownHop, prevKnownEntity, currHop, currEntity, missingHops);
+		    						}
+		    						else {
+			    						asRelationship = this.createDiffAsRelationship(prevKnownHop, prevKnownEntity, currHop, currEntity, missingHops);
+		    						}
+
+		    						if(asRelationship.isComplete()) {
+		    							asTracerouteRelationships.addAsRelationship(asRelationship);
+		    						}
 		    					}
 		    					
 		    				} /*
@@ -614,6 +638,9 @@ public class TaskProcessorImpl implements TaskProcessor{
 			asRelationship.setLastUpdate(date);
 			
 			asRelationship.setMissingHops(missingHops);
+			
+			asRelationship.setIxp(false);
+			asRelationship.setComplete(true);
 
 			return asRelationship;
 		}
@@ -635,31 +662,73 @@ public class TaskProcessorImpl implements TaskProcessor{
 			if(asname1 != null){
 				asName1 = asname1.getAsName();
 			}
-			//String asName0 = tracerouteDao.getASName(lastHopEntity.getNumber()).getAsName();
-			//String asName1 = tracerouteDao.getASName(hopAuxEntity.getNumber()).getAsName(); 		
 			asRelationship.setAsName0(asName0);
 			asRelationship.setAsName1(asName1);
 //			Future<Overlap> futureOverlap = taskingManager.getSiblingRelationship(asName0, asName1);
 //			asRelationship.setOverlap(futureOverlap.get());
 			asRelationship.setMissingHops(missingHops);
+			asRelationship.setComplete(true);
+			asRelationship.setIxp(false);
+
 			//Workaround to solve "not found" for interconection relationships in IXPs 
 			if(asRelationship.getRelationship().equals("not found")){
-				if( (prevHop.getAsTypes().contains("IXP")) || (prevHop.getAsTypes().contains("AS in IXP")) 
-						|| (currHop.getAsTypes().contains("IXP")) || (currHop.getAsTypes().contains("AS in IXP")) ){
+				if((currHop.getAsTypes().contains("IXP")) || (currHop.getAsTypes().contains("AS in IXP")) ){
 					asRelationship.setRelationship("ixp interconnection"); //interconnection in IXP
+					// Any IXP interconnection.
 					
-					//If we have an AS in IXP we add additional info
-					if ( (currHop.getAsTypes().contains("AS in IXP")) ){
+					if ((currHop.getAsTypes().contains("AS in IXP"))){
+						// PeeringDB
 						asRelationship.setIxp(currHop.getKnownEntity().getNumber()); 
 						asRelationship.setIxpName(currHop.getKnownEntity().getName());
 					}
+					else {
+						// Euro-IX hop.
+						asRelationship.setIxp(currEntity.getNumber());
+						asRelationship.setIxpName(currEntity.getName());
+						asRelationship.setComplete(false);
+					}
 					
+					// Set this relationship as IXP.
+					asRelationship.setIxp(true);
 					
-					//Now we save it again in the database
-					tracerouteDao.addASRelationship(asRelationship);
+					if(asRelationship.isComplete()) {
+						//Now we save it again in the database
+						tracerouteDao.addASRelationship(asRelationship);
+					}
 				}
 			}
 			return asRelationship;
+		}
+		
+		private ASRelationship completeIxpAsRelationship(ASRelationship asRelationship, ASHop prevHop, Entity prevEntity, ASHop currHop, Entity currEntity, int missingHops) {
+			if(!asRelationship.isIxp()) log.warning("IXP relatioship : this relationship is not for an IXP");
+			if(asRelationship.isComplete()) log.warning("IXP relationship : the relationship should be incomplete.");
+			if(!asRelationship.getHopId1().equals(prevHop.getHopId())) log.warning("IXP relationship : hop ID mismatch.");
+			
+			asRelationship.setHopId1(currHop.getHopId());
+			//Now we add the AS names and the overlap for identifying Siblings
+			String asName1 = currEntity.getAsNumber();
+			ASName asname1 = tracerouteDao.getASName(asName1);
+			if(asname1 != null){
+				asName1 = asname1.getAsName();
+			}
+			asRelationship.setAsName1(asName1);
+//			Future<Overlap> futureOverlap = taskingManager.getSiblingRelationship(asName0, asName1);
+//			asRelationship.setOverlap(futureOverlap.get());
+			asRelationship.setMissingHops(missingHops + asRelationship.getMissingHops());
+			
+			asRelationship.setComplete(true);
+
+			// Save the relationship in the database.
+			tracerouteDao.addASRelationship(asRelationship);
+			
+			return asRelationship;
+		}
+		
+		private boolean isIxpAndIncompleteRelationship(ASRelationship relationship) {
+			if (null == relationship) return false;
+			else if(relationship.isIxp() && !relationship.isComplete()) return true;
+			else return false;
 		}
 	}
 	
@@ -725,6 +794,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 		
 		int numberIXPs = 0;
 		int numberASesInIXPs = 0;
+		int numberASes = 0;
 		//Find types of ASes
 		List<ASHop> asHops = asTraceroute.getAsHops();
 		for (ASHop asHop : asHops) {
@@ -736,7 +806,12 @@ public class TaskProcessorImpl implements TaskProcessor{
 		}
 		asTracerouteStat.setNumberIXPs(numberIXPs);
 		asTracerouteStat.setNumberASesInIXPs(numberASesInIXPs);
-		int numberASes = numberASHops - numberIXPs - numberASesInIXPs; 
+		if(numberASesInIXPs>0){
+			numberASes = numberASHops - numberIXPs - numberASesInIXPs + 1; 
+		} else {
+			numberASes = numberASHops - numberIXPs + 1; 
+		}
+		 
 		asTracerouteStat.setNumberASes(numberASes);
 		
 		//Process if the Traceroute is completed. By default false

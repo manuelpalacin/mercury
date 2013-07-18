@@ -72,5 +72,5 @@ public interface TracerouteDao {
 	public IpGeoMapping getIpGeoMapping(String ip);
 
 	
-	public boolean isUpdatedMapping(long ip2find);
+	public boolean isUpdatedMapping(long ip);
 }

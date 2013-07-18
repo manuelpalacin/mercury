@@ -47,84 +47,96 @@ public class MappingDaoImpl implements MappingDao {
 	@Override
 	public Entities getAsMappings(List<String> ips) {
 
-		try {
-			//We first check if the server variable is loaded
-			if (server == null) {
-				Properties prop = new Properties();
-				prop.load(context.getResource(
-						"classpath:whois/whois.properties").getInputStream());
-				server = prop.getProperty("whois.server");
-				port = Integer.parseInt(prop.getProperty("whois.port"));
-			}
-			
-			String line;
-			// Array to store the response from the whois server
-			List<String> buf = new ArrayList<String>(); 										
-
-			// Now we create the bulk query for the whois server
-			String query = "";
-			for (String ip : ips) {
-	    		
-				query = query + "\n" + ip;
-			}
-			query = "begin\nverbose" + query + "\nend\n";
-
-			// Establish connection to whois server & port
-			Socket connection = new Socket(server, port);
-			PrintStream out = new PrintStream(connection.getOutputStream());
-			BufferedReader in = new BufferedReader(new InputStreamReader(
-					connection.getInputStream()));
-
-			// Send the whois query
-			out.println(query);
-
-			// Read the query's result
-			while ((line = in.readLine()) != null) {
-				// Add the line to the buffer
-				buf.add(line);
-			}
-			out.close();
-			in.close();
-			connection.close();
-
-			// Now we load the server response (if not empty) into an Entities object
-			if (!buf.isEmpty()) {
-				Entities entities = new Entities();
-				Entity entity;
-
-				for (String aux : buf) {
-					String[] params = aux.split("\\|");
-					if (params.length == 7) {
-						// To skip the first line with headers
-						if (!params[0].trim().equalsIgnoreCase("AS")) { 										
-							entity = new Entity();
-							entity.setNumber(params[0].trim());
-							entity.setIp(params[1].trim());
-							entity.addBgpPrefixes(params[2].trim());
-							entity.setLocation(params[3].trim());
-							entity.setRegistry(params[4].trim());
-							entity.setLastUpdate(params[5].trim());
-							entity.setName(params[6].trim());
-							entity.setSource("http://www.team-cymru.org/Services/ip-to-asn.html");
-							entity.setType("AS");
-							long[] range = getRange(params[2].trim());
-							entity.setIpNum(range[0]);
-							entity.setRangeLow(range[1]);
-							entity.setRangeHigh(range[2]);
-							entity.setNumRangeIps(range[3]);
-							
-							entities.addEntity(entity);
+		int retries = 0;
+		while(retries <=  5){
+			try {
+				//We first check if the server variable is loaded
+				if (server == null) {
+					Properties prop = new Properties();
+					prop.load(context.getResource(
+							"classpath:whois/whois.properties").getInputStream());
+					server = prop.getProperty("whois.server");
+					port = Integer.parseInt(prop.getProperty("whois.port"));
+				}
+				
+				String line;
+				// Array to store the response from the whois server
+				List<String> buf = new ArrayList<String>(); 										
+	
+				// Now we create the bulk query for the whois server
+				String query = "";
+				for (String ip : ips) {
+		    		
+					query = query + "\n" + ip;
+				}
+				query = "begin\nverbose" + query + "\nend\n";
+	
+				// Establish connection to whois server & port
+				Socket connection = new Socket(server, port);
+				PrintStream out = new PrintStream(connection.getOutputStream());
+				BufferedReader in = new BufferedReader(new InputStreamReader(
+						connection.getInputStream()));
+	
+				// Send the whois query
+				out.println(query);
+	
+				// Read the query's result
+				while ((line = in.readLine()) != null) {
+					// Add the line to the buffer
+					buf.add(line);
+				}
+				out.close();
+				in.close();
+				connection.close();
+	
+				// Now we load the server response (if not empty) into an Entities object
+				if (!buf.isEmpty()) {
+					Entities entities = new Entities();
+					Entity entity;
+	
+					for (String aux : buf) {
+						String[] params = aux.split("\\|");
+						if (params.length == 7) {
+							// To skip the first line with headers
+							if (!params[0].trim().equalsIgnoreCase("AS")) { 										
+								entity = new Entity();
+								entity.setNumber(params[0].trim());
+								entity.setIp(params[1].trim());
+								entity.addBgpPrefixes(params[2].trim());
+								entity.setLocation(params[3].trim());
+								entity.setRegistry(params[4].trim());
+								entity.setLastUpdate(params[5].trim());
+								entity.setName(params[6].trim());
+								entity.setSource("http://www.team-cymru.org/Services/ip-to-asn.html");
+								entity.setType("AS");
+								long[] range = getRange(params[2].trim());
+								entity.setIpNum(range[0]);
+								entity.setRangeLow(range[1]);
+								entity.setRangeHigh(range[2]);
+								entity.setNumRangeIps(range[3]);
+								
+								entities.addEntity(entity);
+							}
 						}
 					}
+					return entities;
+				} else {
+					log.info("Problems with team CYMRU! Maybe we have exceeded the limit");
+					retries++;
+					Thread.sleep(60000);
 				}
-				return entities;
-			} else {
-				log.info("Problems with team CYMRU! Maybe we have exceeded the limit");
+	
+			} catch (Exception e) {
+				log.info("Error connecting to the whois server\n" + e.toString());
+				//return null;
+				retries++;
+				try {
+					Thread.sleep(60000);
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					log.info("Error connecting to the whois server\n" + e1.toString());
+				}
 			}
-
-		} catch (IOException e) {
-			log.info("Error connecting to the whois server\n" + e.toString());
-			return null;
 		}
 		
 		//If there is no entries return null
@@ -287,7 +299,7 @@ public class MappingDaoImpl implements MappingDao {
 			return data;
 			
 		} else {
-			log.info("Error for: "+ipWithMask);
+			//log.info("Error for: "+ipWithMask);
 			long[] data = {0,0,0,0};
 			return data;
 		}

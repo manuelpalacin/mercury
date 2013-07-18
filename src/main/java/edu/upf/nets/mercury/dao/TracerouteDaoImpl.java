@@ -113,11 +113,8 @@ public class TracerouteDaoImpl implements TracerouteDao {
 	
 	
 	@Override
-	public boolean isUpdatedMapping(long ip2find) {
+	public boolean isUpdatedMapping(long ip) {
 
-//		if (((ip2find >> 24) & 0xFF) == 10) {
-//			log.warning("Private IP!!!");
-//		}
 		
 		Calendar cal = Calendar.getInstance();
 		cal.add(Calendar.MONTH, -1);
@@ -130,8 +127,8 @@ public class TracerouteDaoImpl implements TracerouteDao {
 		mongoTemplate.indexOps("entities").ensureIndex(new Index("ipNum", Order.ASCENDING));
 
 		Query q = new Query(Criteria.where("timeStamp").gt(cal.getTime()).
-				and("rangeLow").lte(ip2find).
-				and("rangeHigh").gte(ip2find).
+				and("rangeLow").lte(ip).
+				and("rangeHigh").gte(ip).
 				and("source").is("http://www.team-cymru.org/Services/ip-to-asn.html")
 				);
 
@@ -394,33 +391,7 @@ public class TracerouteDaoImpl implements TracerouteDao {
 
 
 	
-	private long[] getRange(String ipWithMask){
-		
-		String[] ip = ipWithMask.split("/");
-		String[] ipPosition = ip[0].split("\\.");	
-		//Step 0. Check only IPv4 addresses
-		if (ipPosition.length == 4){
-			// Step 1. Convert IPs into ints (32 bits).
-			long addr = (( Integer.parseInt(ipPosition[0]) << 24 ) & 0xFF000000) | 
-					(( Integer.parseInt(ipPosition[1]) << 16 ) & 0xFF0000) | 
-					(( Integer.parseInt(ipPosition[2]) << 8 ) & 0xFF00) | 
-					( Integer.parseInt(ipPosition[3]) & 0xFF);
-			// Step 2. Get CIDR mask
-			int mask = (-1) << (32 - Integer.parseInt(ip[1]));
-			// Step 3. Find lowest IP address
-			long rangeLow = addr & mask;
-			// Step 4. Find highest IP address
-			long rangeHigh = rangeLow + (~mask);
-			// Step 5. NUmber of ips in range
-			long numRangeIps = rangeHigh - rangeLow;
-			long[] data = {addr,rangeLow,rangeHigh,numRangeIps};
-			return data;
-			
-		} else {
-			long[] data = {0,0,0,0};
-			return data;
-		}
-	}
+	
 	
 //	private long convertToDecimalIp(String ip){
 //		String[] ipPosition = ip.split("\\.");	
@@ -436,12 +407,15 @@ public class TracerouteDaoImpl implements TracerouteDao {
 //	}
 	
 	private long convertToDecimalIp(String ip) { 
-        String[] addrArray = ip.split("\\.");
-        long num = 0; 
-        for (int i = 0; i < addrArray.length; i++) { 
-            int power = 3 - i;
-            num += ((Integer.parseInt(addrArray[i]) % 256 * Math.pow(256, power))); 
-        } 
+        
+        long num = -1; 
+        if(null != ip){
+	        String[] addrArray = ip.split("\\.");
+	        for (int i = 0; i < addrArray.length; i++) { 
+	            int power = 3 - i;
+	            num += ((Integer.parseInt(addrArray[i]) % 256 * Math.pow(256, power))); 
+	        } 
+        }
         return num; 
     }
 

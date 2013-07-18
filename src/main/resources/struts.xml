@@ -27,16 +27,7 @@
 		<default-interceptor-ref name="fileUploadStack" />	
 		
 		
-		<!-- TEST ACTIONS -->
-		<action name="helloWorld" class="helloAction" method="helloWorld">
-			<result name="success">/list.jsp</result>
-			<result name="error">/error.jsp</result>
-		</action>
-	
-		<action name="getHelloUsers" class="helloAction" method="getHelloUsers">
-			<result name="success">/list.jsp</result>
-			<result name="error">/error.jsp</result>
-		</action>
+
 	
 		<action name="getLastTraceroutes" class="tracerouteAction" method="getLastTraceroutes">
 			<result name="success">/tracelist.jsp</result>

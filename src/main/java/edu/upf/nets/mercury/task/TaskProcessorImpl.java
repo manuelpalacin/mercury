@@ -96,18 +96,23 @@ public class TaskProcessorImpl implements TaskProcessor{
 	        		loadIpsToProcess();
 		        	//3. Process IPs using Cymru whois service and save new IP mappings
 	        		log.info("STEP-3");
-	        		processIpsCymru();
-	        		//4. Process IPs geo mapping
-	        		log.info("STEP-4");
-	        		processIpGeoMappings();
-	        		//6 Update traceroute indexes to pending
-	        		log.info("STEP-6");
-	        		updateTracerouteIndexesProcessed();
-	        		//7 create, process and save ASTraceroutes for each index
-	        		log.info("STEP-7");
-	        		createASTraceroutes();
-	        		
-	        		log.info("Traces processed");
+	        		boolean completed = processIpsCymru();
+	        		if(completed){
+		        		//4. Process IPs geo mapping
+		        		log.info("STEP-4");
+		        		processIpGeoMappings();
+		        		//6 Update traceroute indexes to pending
+		        		log.info("STEP-6");
+		        		updateTracerouteIndexesProcessed();
+		        		//7 create, process and save ASTraceroutes for each index
+		        		log.info("STEP-7");
+		        		createASTraceroutes();
+		        		
+		        		log.info("Traces processed");
+	        		} else {
+	        			log.info("STEP-N: Error connecting to CYMRU");
+	        			abortTracerouteIndexesProcessed();
+	        		}
 	        		
 	        	} else {
 	        		log.info("No traces to process");
@@ -186,7 +191,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 		ips = new ArrayList<String>();
 		geoips = new ArrayList<String>();
 		traceList = new ArrayList<Trace>();
-    	tracerouteIndexes = tracerouteDao.getTracerouteIndexesListToProcess(100); //Number of TR to process
+    	tracerouteIndexes = tracerouteDao.getTracerouteIndexesListToProcess(500); //Number of TR to process
     	List<TracerouteIndex> tracerouteIndexesProcessing = new ArrayList<TracerouteIndex>();
     	for (TracerouteIndex tracerouteIndex : tracerouteIndexes) {
 			//1.1 Update tracerouteIndexes
@@ -260,7 +265,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 	}
 	
 	//3. Process IPs using Cymru whois service and save new IP mappings
-	private void processIpsCymru() {
+	private boolean processIpsCymru() {
     	
 		entityList = new ArrayList<Entity>();
 		//3. Check Cymru 
@@ -269,6 +274,9 @@ public class TaskProcessorImpl implements TaskProcessor{
         	//Entities asMappings = futureAsMappings.get();
 
         	Entities asMappings = mappingDao.getAsMappings(ips);
+        	if(asMappings==null){
+        		return false;
+        	}
         	for (Entity entity : asMappings.getEntities()) {
 				//4. Obtain server name for the ip. Very Time CONSUMING!!
 				//Future<String> serverName = taskingManager.getNameserver(entity.getIp());
@@ -282,6 +290,7 @@ public class TaskProcessorImpl implements TaskProcessor{
     	if (! entityList.isEmpty()){
     		tracerouteDao.addIpMappings(entityList);
     	}
+    	return true;
 	}
 	
 	//4. Process Ip Geo Mapping and save new geo mappings
@@ -320,6 +329,18 @@ public class TaskProcessorImpl implements TaskProcessor{
 		}
     	if(! tracerouteIndexesPending.isEmpty()){
     		tracerouteDao.updateTracerouteIndexes(tracerouteIndexesPending);
+    	}
+	}
+	
+	private void abortTracerouteIndexesProcessed(){
+		List<TracerouteIndex> tracerouteIndexesAborting = new ArrayList<TracerouteIndex>();
+    	for (TracerouteIndex tracerouteIndex : tracerouteIndexes) {
+    		tracerouteIndex.setCompleted("INCOMPLETED");
+    		tracerouteIndex.setLastUpdate(new Date());
+    		tracerouteIndexesAborting.add(tracerouteIndex);
+		}
+    	if(! tracerouteIndexesAborting.isEmpty()){
+    		tracerouteDao.updateTracerouteIndexes(tracerouteIndexesAborting);
     	}
 	}
 	
@@ -433,7 +454,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 	    			log.warning("IP is null");
 	    		}
 	    		if ( (!tracerouteDao.getLastIpMappings(asTraceroute.getOriginIp()).isEmpty()) && 
-	    				tracerouteDao.isUpdatedMapping(convertToDecimalIp(asTraceroute.getOriginIp())) ){
+	    				tracerouteDao.isUpdatedMapping(convertToDecimalIp(asTraceroute.getOriginIp()) ) ){
 	    			try {
 		    			Entity originEntity = tracerouteDao.getLastIpMappings(asTraceroute.getOriginIp()).get(0);
 		    			asTraceroute.setOriginAS(originEntity.getNumber());
@@ -505,7 +526,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 	    					if(prevEntity.isSameAs(currEntity)) {
 	    						// The current hop AS is the same as the previous known AS.
 	    						asRelationship = this.createSameAsRelationship(prevHop, prevEntity, currHop, currEntity, missingHops);
-	    						if(asRelationship.isComplete()) {
+	    						if(asRelationship.getIsComplete()) {
 	    							asTracerouteRelationships.addAsRelationship(asRelationship);
 	    						}
 	    					}
@@ -520,7 +541,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 		    						asRelationship = this.createDiffAsRelationship(prevHop, prevEntity, currHop, currEntity, missingHops);
 	    						}
 	    						
-	    						if(asRelationship.isComplete()) {
+	    						if(asRelationship.getIsComplete()) {
 	    							asTracerouteRelationships.addAsRelationship(asRelationship);
 	    						}	
 	    					}
@@ -535,7 +556,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 		    					if(prevKnownEntity.isSameAs(currEntity)) {
 		    						// The current hop AS is the same as the previous known AS.
 		    						asRelationship = this.createSameAsRelationship(prevKnownHop, prevKnownEntity, currHop, currEntity, missingHops);
-		    						if(asRelationship.isComplete()) {
+		    						if(asRelationship.getIsComplete()) {
 		    							asTracerouteRelationships.addAsRelationship(asRelationship);
 		    						}
 		    					}
@@ -550,7 +571,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 			    						asRelationship = this.createDiffAsRelationship(prevKnownHop, prevKnownEntity, currHop, currEntity, missingHops);
 		    						}
 
-		    						if(asRelationship.isComplete()) {
+		    						if(asRelationship.getIsComplete()) {
 		    							asTracerouteRelationships.addAsRelationship(asRelationship);
 		    						}
 		    					}
@@ -639,8 +660,8 @@ public class TaskProcessorImpl implements TaskProcessor{
 			
 			asRelationship.setMissingHops(missingHops);
 			
-			asRelationship.setIxp(false);
-			asRelationship.setComplete(true);
+			asRelationship.setIsIX(false);
+			asRelationship.setIsComplete(true);
 
 			return asRelationship;
 		}
@@ -667,8 +688,10 @@ public class TaskProcessorImpl implements TaskProcessor{
 //			Future<Overlap> futureOverlap = taskingManager.getSiblingRelationship(asName0, asName1);
 //			asRelationship.setOverlap(futureOverlap.get());
 			asRelationship.setMissingHops(missingHops);
-			asRelationship.setComplete(true);
-			asRelationship.setIxp(false);
+			asRelationship.setIsIX(false);
+			asRelationship.setIsComplete(true);
+			
+
 
 			//Workaround to solve "not found" for interconection relationships in IXPs 
 			if(asRelationship.getRelationship().equals("not found")){
@@ -685,13 +708,13 @@ public class TaskProcessorImpl implements TaskProcessor{
 						// Euro-IX hop.
 						asRelationship.setIxp(currEntity.getNumber());
 						asRelationship.setIxpName(currEntity.getName());
-						asRelationship.setComplete(false);
+						asRelationship.setIsComplete(false);
 					}
 					
 					// Set this relationship as IXP.
-					asRelationship.setIxp(true);
+					asRelationship.setIsIX(true);
 					
-					if(asRelationship.isComplete()) {
+					if(asRelationship.getIsComplete()) {
 						//Now we save it again in the database
 						tracerouteDao.addASRelationship(asRelationship);
 					}
@@ -701,8 +724,8 @@ public class TaskProcessorImpl implements TaskProcessor{
 		}
 		
 		private ASRelationship completeIxpAsRelationship(ASRelationship asRelationship, ASHop prevHop, Entity prevEntity, ASHop currHop, Entity currEntity, int missingHops) {
-			if(!asRelationship.isIxp()) log.warning("IXP relatioship : this relationship is not for an IXP");
-			if(asRelationship.isComplete()) log.warning("IXP relationship : the relationship should be incomplete.");
+			if(!asRelationship.getIsIX()) log.warning("IXP relatioship : this relationship is not for an IXP");
+			if(asRelationship.getIsComplete()) log.warning("IXP relationship : the relationship should be incomplete.");
 			if(!asRelationship.getHopId1().equals(prevHop.getHopId())) log.warning("IXP relationship : hop ID mismatch.");
 			
 			asRelationship.setHopId1(currHop.getHopId());
@@ -717,7 +740,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 //			asRelationship.setOverlap(futureOverlap.get());
 			asRelationship.setMissingHops(missingHops + asRelationship.getMissingHops());
 			
-			asRelationship.setComplete(true);
+			asRelationship.setIsComplete(true);
 
 			// Save the relationship in the database.
 			tracerouteDao.addASRelationship(asRelationship);
@@ -727,7 +750,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 		
 		private boolean isIxpAndIncompleteRelationship(ASRelationship relationship) {
 			if (null == relationship) return false;
-			else if(relationship.isIxp() && !relationship.isComplete()) return true;
+			else if(relationship.getIsIX() && !relationship.getIsComplete()) return true;
 			else return false;
 		}
 	}
@@ -806,12 +829,13 @@ public class TaskProcessorImpl implements TaskProcessor{
 		}
 		asTracerouteStat.setNumberIXPs(numberIXPs);
 		asTracerouteStat.setNumberASesInIXPs(numberASesInIXPs);
-		if(numberASesInIXPs>0){
-			numberASes = numberASHops - numberIXPs - numberASesInIXPs + 1; 
-		} else {
-			numberASes = numberASHops - numberIXPs + 1; 
-		}
-		 
+		
+//		if(numberASesInIXPs>0){
+//			numberASes = numberASHops - numberIXPs - numberASesInIXPs + 1; 
+//		} else {
+//			numberASes = numberASHops - numberIXPs + 1; 
+//		}
+		numberASes = numberASHops + 1;
 		asTracerouteStat.setNumberASes(numberASes);
 		
 		//Process if the Traceroute is completed. By default false
@@ -873,6 +897,7 @@ public class TaskProcessorImpl implements TaskProcessor{
     }
 
 	private boolean isPrivateIp(long ip){
+		
 		if( ( 0x0A000000 <= ip 	&& ip <= 0x0AFFFFFF ) || 
 			( 0xAC100000 <= ip 	&& ip <= 0xAC1FFFFF) || 
 			( 0xC0A80000 <= ip 	&& ip <= 0xC0A8FFFF ) ){

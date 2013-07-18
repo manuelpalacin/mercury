@@ -7,6 +7,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "asrelationships")
@@ -27,8 +28,10 @@ public class ASRelationship {
 	private int missingHops;
 	private String ixpName;
 	private String ixp;
-	private boolean isIxp;
-	private boolean isComplete;
+	@Transient
+	private Boolean isIX;
+	@Transient
+	private Boolean isComplete;
 	
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -123,18 +126,19 @@ public class ASRelationship {
 	public void setIxp(String ixp) {
 		this.ixp = ixp;
 	}
-	public boolean isIxp() {
-		return isIxp;
+	public Boolean getIsIX() {
+		return isIX;
 	}
-	public void setIxp(boolean isIxp) {
-		this.isIxp = isIxp;
+	public void setIsIX(Boolean isIX) {
+		this.isIX = isIX;
 	}
-	public boolean isComplete() {
+	public Boolean getIsComplete() {
 		return isComplete;
 	}
-	public void setComplete(boolean isComplete) {
+	public void setIsComplete(Boolean isComplete) {
 		this.isComplete = isComplete;
 	}
+
 	
 	
 

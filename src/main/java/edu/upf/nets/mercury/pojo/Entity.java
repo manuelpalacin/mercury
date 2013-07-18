@@ -11,6 +11,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "entities")
@@ -29,6 +30,7 @@ public class Entity implements Cloneable{
 	private String type;
 	private String source;
 	private String registry;
+	@Indexed
 	private Date timeStamp;
 	private List<String> bgpPrefixes;
 	private List<Entity> participants;

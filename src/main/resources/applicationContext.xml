@@ -28,14 +28,14 @@
 	</bean>
  
 	<!-- MySQL Database Configuration -->
-	<import resource="classpath:/spring/config/DataSource.xml" />
-	<import resource="classpath:/spring/config/Hibernate.xml" />
+<!-- 	<import resource="classpath:/spring/config/DataSource.xml" /> -->
+<!-- 	<import resource="classpath:/spring/config/Hibernate.xml" /> -->
 	
 	<!-- MySQL and Mongodb configurations -->
 	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
 		<property name="locations">
 		    <list>
-				<value>classpath:/database/database.properties</value>
+<!-- 				<value>classpath:/database/database.properties</value> -->
 				<value>classpath:/mongo/mongodb.properties</value>
 			</list>
 		</property>

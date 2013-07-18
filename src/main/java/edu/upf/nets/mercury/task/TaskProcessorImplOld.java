@@ -76,16 +76,16 @@ public class TaskProcessorImplOld implements TaskProcessor{
 	        	for (Trace trace : traceList) {
 	        		String ip2find = trace.getHopIp();
 	        		//2. Check if the ip is already introduced in mongodb in the last month
-	        		if(!ip2find.equalsIgnoreCase("destination unreachable")){
-	        			if(tracerouteDao.isUpdatedAndNotPrivateMapping(convertToDecimalIp(ip2find))){
-//		        		if ( (tracerouteDao.getUpdatedIpMappings(ip2find).isEmpty()) && 
-//		        				(!tracerouteDao.isPrivateIpMapping(ip2find)) ){
-			        		//Add ip to process later in 5
-			        		ips.add(ip2find);			        		
-		        		} else{
-		        			log.info("Ip already mapped in the database: "+ip2find);
-		        		}
-		        	}
+//	        		if(!ip2find.equalsIgnoreCase("destination unreachable")){
+//	        			if(tracerouteDao.isUpdatedAndNotPrivateMapping(convertToDecimalIp(ip2find))){
+////		        		if ( (tracerouteDao.getUpdatedIpMappings(ip2find).isEmpty()) && 
+////		        				(!tracerouteDao.isPrivateIpMapping(ip2find)) ){
+//			        		//Add ip to process later in 5
+//			        		ips.add(ip2find);			        		
+//		        		} else{
+//		        			log.info("Ip already mapped in the database: "+ip2find);
+//		        		}
+//		        	}
 				}
 	        	
 	        	//5. Check Cymru 

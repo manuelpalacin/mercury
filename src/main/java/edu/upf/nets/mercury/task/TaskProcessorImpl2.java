@@ -206,14 +206,14 @@ public class TaskProcessorImpl2 implements TaskProcessor{
     		
     		//2. Check if the ip is already introduced in mongodb in the last month
     		if(!ip2find.equalsIgnoreCase("destination unreachable")){
-    			if(tracerouteDao.isUpdatedAndNotPrivateMapping(convertToDecimalIp(ip2find))){
-    			//if(!tracerouteDao.isUpdatedPrivateMapping(ip2find)){
-	        		//Add ip to process later in 3
-	        		ips.add(ip2find);
-	        		//log.info("TEST: "+ip2find+" "+ i++);
-        		} else{
-        			//log.info("Ip already mapped in the database: "+ip2find);
-        		}
+//    			if(tracerouteDao.isUpdatedAndNotPrivateMapping(convertToDecimalIp(ip2find))){
+//    			//if(!tracerouteDao.isUpdatedPrivateMapping(ip2find)){
+//	        		//Add ip to process later in 3
+//	        		ips.add(ip2find);
+//	        		//log.info("TEST: "+ip2find+" "+ i++);
+//        		} else{
+//        			//log.info("Ip already mapped in the database: "+ip2find);
+//        		}
         		
         		/*
         		 * COMMENTED TEMPORARLY
@@ -386,8 +386,8 @@ public class TaskProcessorImpl2 implements TaskProcessor{
 	    		log.info("START ASNUM");
 	    		//Possible BUG
 	    		//Now we set information about the asNumbers and asNames, this is dangerous cause maybe entity(0) has NO AS number
-	    		if ( (!tracerouteDao.getLastIpMappings(asTraceroute.getOriginIp()).isEmpty()) && 
-	    				(tracerouteDao.isUpdatedAndNotPrivateMapping(convertToDecimalIp(asTraceroute.getOriginIp())))){
+	    		if ( (!tracerouteDao.getLastIpMappings(asTraceroute.getOriginIp()).isEmpty()) //&& 
+	    				/*(tracerouteDao.isUpdatedAndNotPrivateMapping(convertToDecimalIp(asTraceroute.getOriginIp()))) */){
 	    				//(!tracerouteDao.isPrivateIpMapping(asTraceroute.getOriginIp())) ){
 	    			try {
 		    			Entity originEntity = tracerouteDao.getLastIpMappings(asTraceroute.getOriginIp()).get(0);

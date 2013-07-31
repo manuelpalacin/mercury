@@ -312,6 +312,7 @@ public class WebInspectorTest {
         String domain = "http://www.orange.es";
         print("Fetching %s...", domain);
 
+
         Document doc = Jsoup.connect(domain).get();
         Elements media = doc.select("[src]");
         Elements imports = doc.select("link[href]");
@@ -339,8 +340,8 @@ public class WebInspectorTest {
 		// Create the connection manager.
 		PoolingNHttpClientConnectionManager connectionManager = new PoolingNHttpClientConnectionManager(
 				new DefaultConnectingIOReactor());
-		connectionManager.setMaxTotal(10);
-		connectionManager.setDefaultMaxPerRoute(1);
+		connectionManager.setMaxTotal(256);
+		connectionManager.setDefaultMaxPerRoute(6);
 		// Create the request configuration.
 		requestConfig = RequestConfig.custom().setSocketTimeout(3000)
 				.setConnectTimeout(3000).build();
@@ -355,16 +356,67 @@ public class WebInspectorTest {
 		//String[] urls = new String[] { "http://www.google.com/","http://www.microsoft.com/", "http://www.apple.com/" };
 
 		httpClient.start();
-
+		
+		
+		
 		try {
+			long start = new Date().getTime();
+			
+
+			// Request main page.
+			
 			// Create a counter.
-			final CountDownLatch counter = new CountDownLatch(urls.length);
+			final CountDownLatch counterMainPage = new CountDownLatch(1);
+			
+			// Create a new HTTP get request.
+			final HttpGet requestDomain = new HttpGet(domain);
+			// Show a message.
+			System.out.println("Request for: " + domain);
+			// Execute the request asynchronously.
+			httpClient.execute(requestDomain, new FutureCallback<HttpResponse>() {
+
+				@Override
+				public void cancelled() {
+					// TODO Auto-generated method stub
+					System.out.println(requestDomain.getRequestLine()
+							+ " cancelled");
+					// Decrement the counter.
+					counterMainPage.countDown();
+				}
+
+				@Override
+				public void completed(HttpResponse response) {
+					// TODO Auto-generated method stub
+					System.out.println(requestDomain.getRequestLine() + "->"
+							+ response.getStatusLine() + " ("
+							+ response.getEntity().getContentLength()
+							+ " bytes received)");
+					// Decrement the counter.
+					counterMainPage.countDown();
+				}
+
+				@Override
+				public void failed(Exception exception) {
+					// TODO Auto-generated method stub
+					System.out.println(requestDomain.getRequestLine() + "->"
+							+ exception);
+					// Decrement the counter.
+					counterMainPage.countDown();
+				}
+			});
+
+			
+			// Request resources.
+			
+			// Create a counter.
+			final CountDownLatch counterResources = new CountDownLatch(urls.length);
+			
 			// For each URL in the URLs list.
 			for (final String url : urls) {
 				// Create a new HTTP get request.
 				final HttpGet request = new HttpGet(url);
 				// Show a message.
-				System.out.println("Reqquest for: " + url);
+				System.out.println("Request for: " + url);
 				// Execute the request asynchronously.
 				httpClient.execute(request, new FutureCallback<HttpResponse>() {
 
@@ -374,7 +426,7 @@ public class WebInspectorTest {
 						System.out.println(request.getRequestLine()
 								+ " cancelled");
 						// Decrement the counter.
-						counter.countDown();
+						counterResources.countDown();
 					}
 
 					@Override
@@ -385,7 +437,7 @@ public class WebInspectorTest {
 								+ response.getEntity().getContentLength()
 								+ " bytes received)");
 						// Decrement the counter.
-						counter.countDown();
+						counterResources.countDown();
 					}
 
 					@Override
@@ -394,12 +446,14 @@ public class WebInspectorTest {
 						System.out.println(request.getRequestLine() + "->"
 								+ exception);
 						// Decrement the counter.
-						counter.countDown();
+						counterResources.countDown();
 					}
 				});
 			}
 			// Wait for the counter to complete.
-			counter.await();
+			counterResources.await();
+			long finish = new Date().getTime();
+			log.info("Total time: "+ (finish-start));
 		} finally {
 			// Stop the HTTP client.
 			httpClient.close();

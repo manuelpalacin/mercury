@@ -19,29 +19,29 @@
 				</property>
 			</activation>
 			<dependencies>
-				<dependency>
-					<groupId>com.sun</groupId>
-					<artifactId>tools</artifactId>
-					<version>1.5.0</version>
-					<scope>system</scope>
-					<!-- <systemPath>${java.home}/jdk1.6.0_38/lib/tools.jar</systemPath> -->
-					<systemPath>C:/Program Files/Java/jdk1.6.0_38/lib/tools.jar</systemPath>
-				</dependency>
-				<dependency>
-					<groupId>java</groupId>
-					<artifactId>plugin</artifactId>
-					<version>1.6.0_38</version>
-					<scope>system</scope>
-					<!-- <systemPath>${java.home}/jdk1.6.0_38/jre/lib/plugin.jar</systemPath> -->
-					<systemPath>C:/Program Files/Java/jdk1.6.0_38/jre/lib/plugin.jar</systemPath>
-				</dependency>
-				<dependency>
-					<groupId>javax.servlet</groupId>
-					<artifactId>servlet-api</artifactId>
-					<version>2.5</version>
-					<scope>system</scope>
-					<systemPath>C:\Program Files\Apache Software Foundation\Tomcat 7.0\lib\servlet-api.jar</systemPath>
-				</dependency>
+<!-- 				<dependency> -->
+<!-- 					<groupId>com.sun</groupId> -->
+<!-- 					<artifactId>tools</artifactId> -->
+<!-- 					<version>1.5.0</version> -->
+<!-- 					<scope>system</scope> -->
+<!-- 					<systemPath>${java.home}/jdk1.6.0_38/lib/tools.jar</systemPath> -->
+<!-- 					<systemPath>C:/Program Files/Java/jdk1.6.0_38/lib/tools.jar</systemPath> -->
+<!-- 				</dependency> -->
+<!-- 				<dependency> -->
+<!-- 					<groupId>java</groupId> -->
+<!-- 					<artifactId>plugin</artifactId> -->
+<!-- 					<version>1.6.0_38</version> -->
+<!-- 					<scope>system</scope> -->
+<!-- 					<systemPath>${java.home}/jdk1.6.0_38/jre/lib/plugin.jar</systemPath> -->
+<!-- 					<systemPath>C:/Program Files/Java/jdk1.6.0_38/jre/lib/plugin.jar</systemPath> -->
+<!-- 				</dependency> -->
+<!-- 				<dependency> -->
+<!-- 					<groupId>javax.servlet</groupId> -->
+<!-- 					<artifactId>servlet-api</artifactId> -->
+<!-- 					<version>2.5</version> -->
+<!-- 					<scope>system</scope> -->
+<!-- 					<systemPath>C:\Program Files\Apache Software Foundation\Tomcat 7.0\lib\servlet-api.jar</systemPath> -->
+<!-- 				</dependency> -->
 			</dependencies>
 		</profile>
 	</profiles>
@@ -365,37 +365,53 @@
 		</dependency>
 		
 		<!-- HTTP client -->
-<dependency>
-	<groupId>org.apache.httpcomponents</groupId>
-	<artifactId>httpcore</artifactId>
-	<version>4.3-beta2</version>
-</dependency>
-              
-<dependency>
-	<groupId>org.apache.httpcomponents</groupId>
-	<artifactId>httpclient</artifactId>
-	<version>4.3-beta2</version>
-</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpcore</artifactId>
+			<version>4.3-beta2</version>
+		</dependency>
+		              
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.3-beta2</version>
+		</dependency>
+		            
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpcore-nio</artifactId>
+			<version>4.3-beta2</version>
+		</dependency>
+		 
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpasyncclient</artifactId>
+			<version>4.0-beta4</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>fluent-hc</artifactId>
+			<version>4.3-beta2</version>
+		</dependency>
             
-<dependency>
-	<groupId>org.apache.httpcomponents</groupId>
-	<artifactId>httpcore-nio</artifactId>
-	<version>4.3-beta2</version>
-</dependency>
- 
-<dependency>
-	<groupId>org.apache.httpcomponents</groupId>
-	<artifactId>httpasyncclient</artifactId>
-	<version>4.0-beta4</version>
-</dependency>
+		<!-- Servlet api -->
+        <dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>servlet-api</artifactId>
+			<version>2.5</version>
+		</dependency>
+		
+        <!-- plugin -->
+		<dependency>
+		  <groupId>sun.plugin</groupId>
+		  <artifactId>plugin</artifactId>
+		  <version>1.6</version>
+		  <scope>system</scope>
+		  <systemPath>${java.home}/lib/plugin.jar</systemPath>
+		</dependency>
 
-<dependency>
-	<groupId>org.apache.httpcomponents</groupId>
-	<artifactId>fluent-hc</artifactId>
-	<version>4.3-beta2</version>
-</dependency>
-            
-            
+        
             
             
                 

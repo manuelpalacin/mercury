@@ -1,0 +1,91 @@
+<beans xmlns="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+    xmlns:tx="http://www.springframework.org/schema/tx"
+    xmlns:ehcache="http://ehcache-spring-annotations.googlecode.com/svn/schema/ehcache-spring"
+    xmlns:mongo="http://www.springframework.org/schema/data/mongo"
+    xmlns:task="http://www.springframework.org/schema/task"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+            http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd
+            http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-2.5.xsd       
+            http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-2.5.xsd 
+            http://ehcache-spring-annotations.googlecode.com/svn/schema/ehcache-spring http://ehcache-spring-annotations.googlecode.com/svn/schema/ehcache-spring/ehcache-spring-1.1.xsd
+            http://www.springframework.org/schema/data/mongo http://www.springframework.org/schema/data/mongo/spring-mongo-1.0.xsd
+            http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.0.xsd"
+            default-autowire="byName"
+            default-lazy-init="true">
+
+	<!--  We declare the use of Spring annotations     -->
+    <context:annotation-config/>    
+	<!--  We declare which classes must be read to find resources     -->
+    <context:component-scan base-package="edu.upf.nets.mercury" />
+	<!--  Transaction support using Annotations     -->
+	<tx:annotation-driven transaction-manager="transactionManager" proxy-target-class="true" />
+	
+	<bean id="transactionManager" class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+		<property name="sessionFactory" ref="sessionFactory" />
+	</bean>
+ 
+	<!-- MySQL Database Configuration -->
+<!-- 	<import resource="classpath:/spring/config/DataSource.xml" /> -->
+<!-- 	<import resource="classpath:/spring/config/Hibernate.xml" /> -->
+	
+	<!-- MySQL and Mongodb configurations -->
+	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+		    <list>
+<!-- 				<value>classpath:/database/database.properties</value> -->
+				<value>classpath:/mongo/mongodb.properties</value>
+			</list>
+		</property>
+	</bean>
+	
+	
+	<!-- We do not need beans declarations as we are using Repository, Service and Controller annotations in the Classes
+		and we have activated the usage of annotations and a package to find classes -->
+	<!-- Beans -->
+	<!--  	<import resource="classes/spring/HelloBean.xml" /> -->
+ 	
+ 	<!-- Action Beans -->
+	<!--  	<bean id="helloAction" class="edu.upf.nets.mercury.action.HelloAction"> -->
+	<!-- 		<property name="helloManager" ref="helloManager" /> -->
+	<!-- 	</bean> -->
+ 
+ 	<task:annotation-driven/>
+<!--  	<task:scheduled-tasks> -->
+<!--  	    <task:scheduled ref="geoIpDatabase" method="execute" fixed-delay="60000" /> -->
+<!-- 		<task:scheduled ref="taskProcessor" method="process" fixed-delay="10000" /> -->
+<!-- 	    <task:scheduled ref="taskProcessor" method="process" cron="2 * * * * MON-FRI"/> -->
+<!-- 	</task:scheduled-tasks> -->
+ 	
+<!--  	<task:scheduler id="taskScheduler"/> -->
+<!-- 	<task:annotation-driven executor="taskExecutor" scheduler="taskScheduler"/> -->
+ 
+	 <!-- We declare Task Thread bean. Scope prototype for avoiding Singleton of object -->
+	 <bean id="taskExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor" scope="prototype">
+	     <property name="corePoolSize" value="6" />
+	     <property name="maxPoolSize" value="12" />
+	     <property name="queueCapacity" value="20000" /> <!-- MAX=2^31-1=2147483647-->
+	     <property name="waitForTasksToCompleteOnShutdown" value="true" />
+	     <property name="rejectedExecutionHandler">
+            <bean class="java.util.concurrent.ThreadPoolExecutor$CallerRunsPolicy" />
+        </property>
+	</bean>
+	
+	<!-- We declare the ehcache annotations -->
+	<ehcache:annotation-driven />
+    <ehcache:config cache-manager="cacheManager">
+        <ehcache:evict-expired-elements interval="60" />
+    </ehcache:config>
+ 
+    <bean id="cacheManager" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean">
+        <property name="configLocation" value="classpath:/cache/ehcache.xml" />
+    </bean>
+    
+    <!-- We import Mongodb configuration -->
+    <import resource="classpath:/mongo/Mongodb.xml" />
+    
+    
+ 
+</beans>

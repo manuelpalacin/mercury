@@ -49,7 +49,7 @@ public class WebInspectorTest {
 	public void caller() throws InterruptedException, IOException{
 		String[] domains = {"http://www.orange.es","http://www.upf.edu","http://www.apple.com"};
 		for (String domain : domains) {
-			log.info("Execution time for "+domain+": "+ executeAsynCall(domain) +" ms");
+			log.debug("Execution time for "+domain+": "+ executeAsynCall(domain) +" ms");
 		}
 		
 	}

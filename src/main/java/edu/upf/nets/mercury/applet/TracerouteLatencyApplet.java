@@ -319,7 +319,7 @@ public class TracerouteLatencyApplet extends JApplet implements ActionListener {
 		String osName = System.getProperty("os.name").toLowerCase();
 		if (osName.indexOf("windows") != -1) {
 			// -d to avoid name resolution
-			String[] command = { "tracert", "-d", destination }; 
+			String[] command = { "tracert", "-d", "-w", "500", "-h", "30", destination }; 
 			exec(command);
 		} else if (osName.indexOf("mac os x") != -1) {
 			// -n to avoid name resolution, -w to set waittime, -m to set the max TTL
@@ -327,7 +327,7 @@ public class TracerouteLatencyApplet extends JApplet implements ActionListener {
 			exec(command);
 		} else {
 			// -n to avoid name resolution
-			String[] command = { "traceroute", "-n", destination }; 
+			String[] command = { "traceroute", "-n", "-w", "1", "-m", "30", destination }; 
 			exec(command);
 		}
 		log.info(osName);

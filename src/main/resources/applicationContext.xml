@@ -54,12 +54,12 @@
  
  	<task:annotation-driven/>
 <!--  	<task:scheduled-tasks> -->
-<!--  	    <task:scheduled ref="geoIpDatabase" method="execute" fixed-delay="60000" /> -->
+<!--  	   	<task:scheduled ref="geoIpDatabase" method="execute" fixed-delay="60000" /> -->
 <!-- 		<task:scheduled ref="taskProcessor" method="process" fixed-delay="10000" /> -->
-<!-- 	    <task:scheduled ref="taskProcessor" method="process" cron="2 * * * * MON-FRI"/> -->
+<!-- EXAMPLE with cron  <task:scheduled ref="taskProcessor" method="process" cron="2 * * * * MON-FRI"/> -->
 <!-- 	</task:scheduled-tasks> -->
  	
-<!--  	<task:scheduler id="taskScheduler"/> -->
+ 	<task:scheduler id="taskScheduler"/>
 <!-- 	<task:annotation-driven executor="taskExecutor" scheduler="taskScheduler"/> -->
  
 	 <!-- We declare Task Thread bean. Scope prototype for avoiding Singleton of object -->

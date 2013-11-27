@@ -20,6 +20,10 @@ import java.util.logging.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Repository;
+import org.xbill.DNS.DClass;
+import org.xbill.DNS.Lookup;
+import org.xbill.DNS.SimpleResolver;
+import org.xbill.DNS.Type;
 
 import com.google.gson.Gson;
 
@@ -44,6 +48,8 @@ public class MappingDaoImpl implements MappingDao {
 	
 
 
+	
+	
 	@Override
 	public Entities getAsMappings(List<String> ips) {
 
@@ -143,6 +149,113 @@ public class MappingDaoImpl implements MappingDao {
 		return null;
 	}
 
+	
+	@Override
+	public Entities getAsMappingsDNS(List<String> ips) {
+		Entities entities = new Entities();
+
+		for (String ip : ips) {
+			int count = 0;
+			int maxTries = 3;
+			while(true){
+				try{
+					
+					String[] octets = ip.split("\\.");
+					String reversedIp = octets[3]+"."+octets[2]+"."+octets[1]+"."+octets[0];
+			    	String query = reversedIp + ".origin.asn.cymru.com";
+			    	String line = "";
+		    	
+			    	Lookup l = new Lookup(query, Type.TXT, DClass.IN);
+			    	l.setResolver(new SimpleResolver());
+			    	l.run();
+			    	
+				    	if (l.getResult() == Lookup.SUCCESSFUL){
+				    		line = l.getAnswers()[0].rdataToString();
+				    		line = line.substring(1, line.length()-1);
+				    		String[] params = line.split("\\|");
+							if (params.length <= 5) {
+
+									String asName = "NA";
+									
+									try{
+										query = "AS" + params[0].trim() + ".asn.cymru.com";
+										l = new Lookup(query, Type.TXT, DClass.IN);
+								    	l.setResolver(new SimpleResolver());
+								    	l.run();
+								    	if (l.getResult() == Lookup.SUCCESSFUL){
+								    		line = l.getAnswers()[0].rdataToString();
+								    		line = line.substring(1, line.length()-1);
+								    		String[] params2 = line.split("\\|");
+								    		if (params2.length <= 5) {
+								    			asName = params2[4].trim();
+								    		}
+								    		
+								    	} else{
+								    		asName = "NA";
+								    	}
+									}catch(Exception e){
+										asName = "NA";
+									}
+
+	
+									entities.addEntity(
+											buildEntity(ip, params[0].trim(), asName, params[1].trim(), params[2].trim(), params[3].trim())
+										);
+									
+							}
+				    	
+							//If IP found and processed
+							break;
+							
+				    	} else {
+				    		if (++count == maxTries){ 
+				    			log.info("ERROR with IP: "+ip+". The DNS does not match the IP.");
+				    			entities.addEntity(
+										buildEntity(ip, "", "NA", "", "", "")
+									);
+				    			break;
+				    		}
+				    	}
+			    	
+		    	} catch(Exception e){
+		    		if (++count == maxTries){ 
+		    			log.info("ERROR with IP: "+ip+". Too much retries.");
+		    			entities.addEntity(
+								buildEntity(ip, "", "NA", "", "", "")
+							);
+		    			break;
+		    		}
+		    	}
+			}
+		}
+		log.info("Number of IPs: "+entities.getEntities().size());
+    	return entities;
+	}
+	
+	
+	public Entity buildEntity(String ip, String asNumber, String asName, 
+			String bgpPrefix, String location, String registry){
+		Entity entity = new Entity();
+		
+		entity.setIp(ip);
+		entity.setNumber(asNumber);
+		entity.setName(asName);
+		entity.addBgpPrefixes(bgpPrefix);
+		entity.setLocation(location);
+		entity.setRegistry(registry);
+		entity.setSource("http://www.team-cymru.org/Services/ip-to-asn.html");
+		entity.setType("AS");
+		if(!bgpPrefix.equals("")){
+			long[] range = getRange(bgpPrefix);
+			entity.setIpNum(range[0]);
+			entity.setRangeLow(range[1]);
+			entity.setRangeHigh(range[2]);
+			entity.setNumRangeIps(range[3]);
+		}
+		return entity;
+	}
+	
+	
 	@Override
 	public String getNameserver(String ip2find) {
 		InetAddress ia;
@@ -304,6 +417,8 @@ public class MappingDaoImpl implements MappingDao {
 			return data;
 		}
 	}
+
+
 	
 	
 	

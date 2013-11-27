@@ -44,7 +44,7 @@ public class WebInspectorTest {
     }
     
 
-    //@Ignore
+    @Ignore
 	@Test
 	public void caller() throws InterruptedException, IOException{
 		String[] domains = {"http://www.orange.es","http://www.upf.edu","http://www.apple.com"};

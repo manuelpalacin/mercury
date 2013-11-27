@@ -411,9 +411,21 @@
 		  <systemPath>${java.home}/lib/plugin.jar</systemPath>
 		</dependency>
 
-        
+		<!-- tools -->
+        <dependency>
+		  <groupId>com.sun</groupId>
+          <artifactId>tools</artifactId>
+          <version>1.5.0</version>
+		  <scope>system</scope>
+		  <systemPath>${java.home}/lib/plugin.jar</systemPath>
+		</dependency>
             
-            
+       <dependency>
+			<groupId>dnsjava</groupId>
+			<artifactId>dnsjava</artifactId>
+			<version>2.1.1</version>
+		</dependency>
+                 
                 
 
 	</dependencies>

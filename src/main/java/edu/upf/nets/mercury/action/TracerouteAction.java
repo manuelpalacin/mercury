@@ -86,8 +86,9 @@ public class TracerouteAction extends ActionSupport{
 				tracerouteIndexInfo.setDestinationAS(asTraceroute.getDestinationAS());
 				tracerouteIndexInfo.setDestinationASName(asTraceroute.getDestinationASName());
 			
+				tracerouteIndexInfoList.add(tracerouteIndexInfo);
 			}
-			tracerouteIndexInfoList.add(tracerouteIndexInfo);
+			
 		}
 		
 		//Now we load the evolution plot points

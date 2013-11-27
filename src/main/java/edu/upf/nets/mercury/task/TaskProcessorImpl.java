@@ -191,7 +191,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 		ips = new ArrayList<String>();
 		geoips = new ArrayList<String>();
 		traceList = new ArrayList<Trace>();
-    	tracerouteIndexes = tracerouteDao.getTracerouteIndexesListToProcess(500); //Number of TR to process
+    	tracerouteIndexes = tracerouteDao.getTracerouteIndexesListToProcess(100); //Number of TR to process
     	List<TracerouteIndex> tracerouteIndexesProcessing = new ArrayList<TracerouteIndex>();
     	for (TracerouteIndex tracerouteIndex : tracerouteIndexes) {
 			//1.1 Update tracerouteIndexes
@@ -273,7 +273,7 @@ public class TaskProcessorImpl implements TaskProcessor{
         	//Future<Entities> futureAsMappings = taskingManager.getAsMappings(ips);
         	//Entities asMappings = futureAsMappings.get();
 
-        	Entities asMappings = mappingDao.getAsMappings(ips);
+        	Entities asMappings = mappingDao.getAsMappingsDNS(ips);
         	if(asMappings==null){
         		return false;
         	}
@@ -491,20 +491,25 @@ public class TaskProcessorImpl implements TaskProcessor{
 	    		int missingHops = 0;
 	    		
 	    		//Workaround to solve LAN IPs
-	    		String originIp =  asTraceroute.getAsHops().get(0).getHopIp();
-	    		for (ASHop asHopFinding : asTraceroute.getAsHops()) {
-	    			if(asHopFinding.getHopIp().equals(asTraceroute.getOriginIp())){
-	    				originIp = asTraceroute.getOriginIp();
-	    				log.info("Using NAT public IP");
-	    				break;
-	    			}
-				}
+	    		String originIp = "";
+	    		try{
+	    			originIp = asTraceroute.getAsHops().get(0).getHopIp();
+	    		} catch (Exception e){
+		    		for (ASHop asHopFinding : asTraceroute.getAsHops()) {
+		    			if(asHopFinding.getHopIp().equals(asTraceroute.getOriginIp())){
+		    				originIp = asTraceroute.getOriginIp();
+		    				log.info("Using NAT public IP");
+		    				break;
+		    			}
+					}
+	    		}
+
 	    		//log.info("END ASRELS");
 	    		
 	    		
-	    		if(asTraceroute.getTracerouteGroupId().equals("29bbda39-e3ee-45c8-a585-43ece8d5971a")) {
-	    			log.warning("Our traceroute");
-	    		}
+//	    		if(asTraceroute.getTracerouteGroupId().equals("29bbda39-e3ee-45c8-a585-43ece8d5971a")) {
+//	    			log.warning("Our traceroute");
+//	    		}
 	    		
 	    		//log.info("START ASHOPS");
 	    		//We inspect hop by hop

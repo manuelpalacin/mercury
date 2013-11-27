@@ -10,6 +10,8 @@ public interface MappingDao {
 
 	public Entities getAsMappings(List<String> ips);
 	
+	public Entities getAsMappingsDNS(List<String> ips);
+	
 	public String getNameserver(String ip2find);
 	
 	public Overlap getSiblingRelationship(String asName0, String asName1);

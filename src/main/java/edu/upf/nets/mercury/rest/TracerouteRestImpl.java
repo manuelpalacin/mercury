@@ -60,14 +60,14 @@ public class TracerouteRestImpl implements TracerouteRest {
 		String result = "Successful upload from "+yourIp+" at "+new Date()+":\n";
 		result = result + gson.toJson(traceroute);
 		
-//		if(! traceroute.getHops().isEmpty()){
-//			//Now we save the uploaded traceroute after adapting the response
-//			List<Trace> traceList = convertTraceroute(traceroute,yourIp);
-//			tracerouteManager.addTraceList(traceList);
-//			String tracerouteGroupId = traceList.get(0).getTracerouteGroupId();
-//			tracerouteManager.addTracerouteIndex(getTracerouteIndex(tracerouteGroupId));
-//			result = result + "\nCheck the ASTraceroute id: "+tracerouteGroupId;
-//		} 
+		if(! traceroute.getHops().isEmpty()){
+			//Now we save the uploaded traceroute after adapting the response
+			List<Trace> traceList = convertTraceroute(traceroute,yourIp);
+			tracerouteManager.addTraceList(traceList);
+			String tracerouteGroupId = traceList.get(0).getTracerouteGroupId();
+			tracerouteManager.addTracerouteIndex(getTracerouteIndex(tracerouteGroupId));
+			result = result + "\nCheck the ASTraceroute id: "+tracerouteGroupId;
+		} 
 		//log.info(result);
 		log.info("Received traceroute from "+yourIp+" with destination "+traceroute.getDestination());
 		return Response.status(200).entity(result).build();

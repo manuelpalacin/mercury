@@ -59,8 +59,12 @@ public class TracerouteRestImpl implements TracerouteRest {
 		//We check if the Json object contains the origin Ip, 
 		//if not, we get it from the request
 		String yourIp = traceroute.getMyIp();
-		if(traceroute.getMyIp().equals("") || traceroute.getMyIp()==null){
+		if(traceroute.getMyIp()==null){
 			yourIp = req.getRemoteAddr().toString();
+		}else{
+			 if(traceroute.getMyIp().equals("")){
+				 yourIp = req.getRemoteAddr().toString();
+			 }
 		}
 		
 		String result = "Successful upload from "+yourIp+" at "+new Date()+":\n";

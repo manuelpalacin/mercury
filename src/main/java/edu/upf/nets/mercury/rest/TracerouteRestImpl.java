@@ -56,7 +56,13 @@ public class TracerouteRestImpl implements TracerouteRest {
 	public Response uploadTrace( @Context HttpServletRequest req,
 			Traceroute traceroute) {
 		
-		String yourIp = req.getRemoteAddr().toString();
+		//We check if the Json object contains the origin Ip, 
+		//if not, we get it from the request
+		String yourIp = traceroute.getMyIp();
+		if(traceroute.getMyIp().equals("") || traceroute.getMyIp()==null){
+			yourIp = req.getRemoteAddr().toString();
+		}
+		
 		String result = "Successful upload from "+yourIp+" at "+new Date()+":\n";
 		result = result + gson.toJson(traceroute);
 		

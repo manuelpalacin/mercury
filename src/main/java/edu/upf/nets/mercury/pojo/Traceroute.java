@@ -7,6 +7,7 @@ public class Traceroute{
 	
 	private String destination;
 	private String ip;
+	private String myIp;
 	private List<Hop> hops;
 	
 	public String getDestination() {
@@ -21,6 +22,12 @@ public class Traceroute{
 	public void setIp(String ip) {
 		this.ip = ip;
 	}
+	public String getMyIp() {
+		return myIp;
+	}
+	public void setMyIp(String myIp) {
+		this.myIp = myIp;
+	}
 	public List<Hop> getHops() {
 		if (this.hops == null){
 			this.hops = new ArrayList<Hop>();
@@ -34,6 +41,7 @@ public class Traceroute{
 	
 	public String toString(){
 		StringBuffer buffer = new StringBuffer();
+		buffer.append("My Ip address: "+myIp+"\n");
 	    buffer.append("Destination: "+destination+"\n");
 	    buffer.append("Total number of hops: "+getHops().size()+"\n");
 	    buffer.append("Hops:\n");

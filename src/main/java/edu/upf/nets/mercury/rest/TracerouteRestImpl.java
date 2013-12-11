@@ -58,33 +58,33 @@ public class TracerouteRestImpl implements TracerouteRest {
 		
 		//We check if the Json object contains the origin Ip, 
 		//if not, we get it from the request
-		String yourIp = traceroute.getMyIp();
-		if(traceroute.getMyIp()==null){
-			yourIp = req.getRemoteAddr().toString();
+		String srcIp = traceroute.getSrcIp();
+		if(traceroute.getSrcIp()==null){
+			srcIp = req.getRemoteAddr().toString();
 		}else{
-			 if(traceroute.getMyIp().equals("")){
-				 yourIp = req.getRemoteAddr().toString();
+			 if(traceroute.getSrcIp().equals("")){
+				 srcIp = req.getRemoteAddr().toString();
 			 }
 		}
 		
-		String result = "Successful upload from "+yourIp+" at "+new Date()+":\n";
+		String result = "Successful upload from "+srcIp+" at "+new Date()+":\n";
 		result = result + gson.toJson(traceroute);
 		
 		if(! traceroute.getHops().isEmpty()){
 			//Now we save the uploaded traceroute after adapting the response
-			List<Trace> traceList = convertTraceroute(traceroute,yourIp);
+			List<Trace> traceList = convertTraceroute(traceroute, srcIp);
 			tracerouteManager.addTraceList(traceList);
 			String tracerouteGroupId = traceList.get(0).getTracerouteGroupId();
 			tracerouteManager.addTracerouteIndex(getTracerouteIndex(tracerouteGroupId));
 			result = result + "\nCheck the ASTraceroute id: "+tracerouteGroupId;
 		} 
 		//log.info(result);
-		log.info("Received traceroute from "+yourIp+" with destination "+traceroute.getDestination());
+		log.info("Received traceroute from "+srcIp+" with destination "+traceroute.getDstName());
 		return Response.status(200).entity(result).build();
 	}
 	
 	
-	private List<Trace> convertTraceroute(Traceroute traceroute, String yourIp){
+	private List<Trace> convertTraceroute(Traceroute traceroute, String srcIp){
 		List<Trace> traceList = new ArrayList<Trace>();
 		Trace trace;
 		//We create the same unique id for each traceroute
@@ -93,13 +93,16 @@ public class TracerouteRestImpl implements TracerouteRest {
 		for (Hop hop : traceroute.getHops()) {
 			trace = new Trace();
 			trace.setTracerouteGroupId(uniqueKey.toString());
-			trace.setOriginIp(yourIp);
-			trace.setDestination(traceroute.getDestination());
-			trace.setDestinationIp(traceroute.getIp());
+			trace.setSourceIp(srcIp);
+			trace.setSourceName(traceroute.getSrcName());
+			trace.setDestinationName(traceroute.getDstName());
+			trace.setDestinationIp(traceroute.getDstIp());
 			trace.setHopId(hop.getId());
 			trace.setHopIp(hop.getIp());
 			trace.setTimeStamp(date);
 			trace.setLastUpdate(date);
+			trace.setAsn(hop.getAsn());
+			trace.setRtt(hop.getRtt());
 			traceList.add(trace);
 		}
 		

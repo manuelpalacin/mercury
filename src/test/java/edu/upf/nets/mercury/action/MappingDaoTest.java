@@ -100,7 +100,7 @@ public class MappingDaoTest {
 		hop2.setIp("20.10.10.10");
 		traceroute.addHops(hop1);
 		traceroute.addHops(hop2);
-		traceroute.setDestination("20.10.10.10");
+		traceroute.setDstName("20.10.10.10");
 		
 		String request = "http://localhost:8080/mercury/api/traceroute/uploadTrace";
 		URL url = new URL(request); 

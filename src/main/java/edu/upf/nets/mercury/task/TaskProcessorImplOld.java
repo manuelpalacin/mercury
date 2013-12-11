@@ -141,9 +141,9 @@ public class TaskProcessorImplOld implements TaskProcessor{
 	        			//This is not optimal as is repeated by the loop
 	        			tracerouteGroupId = trace.getTracerouteGroupId();
 	        			asTraceroute.setTracerouteGroupId(tracerouteGroupId);
-	        			asTraceroute.setDestination(trace.getDestination());
+	        			asTraceroute.setDestination(trace.getDestinationName());
 	        			asTraceroute.setDestinationIp(trace.getDestinationIp());
-	        			asTraceroute.setOriginIp(trace.getOriginIp());
+	        			asTraceroute.setOriginIp(trace.getSourceIp());
 					}
 	        		
 	        		//Now we add the AS relationships inspecting hop by hop

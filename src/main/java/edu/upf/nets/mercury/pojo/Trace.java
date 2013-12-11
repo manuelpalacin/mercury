@@ -14,13 +14,16 @@ public class Trace {
 
 	private String id;
 	private String tracerouteGroupId;
-	private String originIp;
+	private String sourceIp;
+	private String sourceName;
 	private String destinationIp;
-	private String destination;
+	private String destinationName;
 	private String hopId;
 	private String hopIp;
 	private Date timeStamp;
 	private Date lastUpdate;
+	private String[] asn;
+	private String[] rtt;
 	
 	
     @Id
@@ -39,12 +42,26 @@ public class Trace {
 	public void setTracerouteGroupId(String tracerouteGroupId) {
 		this.tracerouteGroupId = tracerouteGroupId;
 	}
-	@Column(name="originIp")
-	public String getOriginIp() {
-		return originIp;
+	@Column(name="sourceIp")
+	public String getSourceIp() {
+		return sourceIp;
 	}
-	public void setOriginIp(String originIp) {
-		this.originIp = originIp;
+	public void setSourceIp(String sourceIp) {
+		this.sourceIp = sourceIp;
+	}
+	@Column(name="sourceName")
+	public String getSourceName() {
+		return sourceName;
+	}
+	public void setSourceName(String sourceName) {
+		this.sourceName = sourceName;
+	}
+	@Column(name="destinationName")
+	public String getDestinationName() {
+		return destinationName;
+	}
+	public void setDestinationName(String destinationName) {
+		this.destinationName = destinationName;
 	}
 	@Column(name="destinationIp")
 	public String getDestinationIp() {
@@ -52,13 +69,6 @@ public class Trace {
 	}
 	public void setDestinationIp(String destinationIp) {
 		this.destinationIp = destinationIp;
-	}
-	@Column(name="destination")
-	public String getDestination() {
-		return destination;
-	}
-	public void setDestination(String destination) {
-		this.destination = destination;
 	}
 	@Column(name="hopId")
 	public String getHopId() {
@@ -88,7 +98,20 @@ public class Trace {
 	public void setLastUpdate(Date lastUpdate) {
 		this.lastUpdate = lastUpdate;
 	}
-	
+	@Column(name="asn")
+	public String[] getAsn() {
+		return asn;
+	}
+	public void setAsn(String[] asn) {
+		this.asn = asn;
+	}
+	@Column(name="rtt")
+	public String[] getRtt() {
+		return rtt;
+	}
+	public void setRtt(String[] rtt) {
+		this.rtt = rtt;
+	}
 	
 
 }

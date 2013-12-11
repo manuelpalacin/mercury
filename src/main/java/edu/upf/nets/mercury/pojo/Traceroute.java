@@ -5,28 +5,36 @@ import java.util.List;
 
 public class Traceroute{
 	
-	private String destination;
-	private String ip;
-	private String myIp;
+	private String dstIp;
+	private String srcIp;
+	private String dstName;
+	private String srcName;
 	private List<Hop> hops;
 	
-	public String getDestination() {
-		return destination;
+	
+	public String getDstIp() {
+		return dstIp;
 	}
-	public void setDestination(String destination) {
-		this.destination = destination;
+	public void setDstIp(String dstIp) {
+		this.dstIp = dstIp;
 	}
-	public String getIp() {
-		return ip;
+	public String getSrcIp() {
+		return srcIp;
 	}
-	public void setIp(String ip) {
-		this.ip = ip;
+	public void setSrcIp(String srcIp) {
+		this.srcIp = srcIp;
 	}
-	public String getMyIp() {
-		return myIp;
+	public String getDstName() {
+		return dstName;
 	}
-	public void setMyIp(String myIp) {
-		this.myIp = myIp;
+	public void setDstName(String dstName) {
+		this.dstName = dstName;
+	}
+	public String getSrcName() {
+		return srcName;
+	}
+	public void setSrcName(String srcName) {
+		this.srcName = srcName;
 	}
 	public List<Hop> getHops() {
 		if (this.hops == null){
@@ -41,8 +49,10 @@ public class Traceroute{
 	
 	public String toString(){
 		StringBuffer buffer = new StringBuffer();
-		buffer.append("My Ip address: "+myIp+"\n");
-	    buffer.append("Destination: "+destination+"\n");
+		buffer.append("Source Ip address: "+srcIp+"\n");
+		buffer.append("Destination Ip address: "+dstIp+"\n");
+		buffer.append("Source name: "+srcName+"\n");
+	    buffer.append("Destination name: "+dstName+"\n");
 	    buffer.append("Total number of hops: "+getHops().size()+"\n");
 	    buffer.append("Hops:\n");
 	    

@@ -186,12 +186,12 @@ public class TaskProcessorImpl2 implements TaskProcessor{
     		tracerouteIndexesProcessing.add(tracerouteIndex);
     		//1.2 We need to add the destinationIP because some traceroutes do not include it as a hop
     		ips.add(auxList.get(0).getDestinationIp());
-    		//1.3 We need to add the originIP to process
-    		ips.add(auxList.get(0).getOriginIp());
+    		//1.3 We need to add the sourceIP to process
+    		ips.add(auxList.get(0).getSourceIp());
     		//1.4 We need to add the geo destinationIP because some traceroutes do not include it as a hop
     		geoips.add(auxList.get(0).getDestinationIp());
-    		//1.5 We need to add the geo originIP to process
-    		geoips.add(auxList.get(0).getOriginIp());
+    		//1.5 We need to add the geo sourceIP to process
+    		geoips.add(auxList.get(0).getSourceIp());
 		}
     	if(! tracerouteIndexesProcessing.isEmpty()){
     		tracerouteDao.updateTracerouteIndexes(tracerouteIndexesProcessing);
@@ -360,11 +360,11 @@ public class TaskProcessorImpl2 implements TaskProcessor{
 	    			if(done == false){
 		    			tracerouteGroupId = trace.getTracerouteGroupId();
 		    			asTraceroute.setTracerouteGroupId(tracerouteGroupId);
-		    			asTraceroute.setDestination(trace.getDestination());
+		    			asTraceroute.setDestination(trace.getDestinationName());
 		    			asTraceroute.setDestinationIp(trace.getDestinationIp());
-		    			asTraceroute.setOriginIp(trace.getOriginIp());
+		    			asTraceroute.setOriginIp(trace.getSourceIp());
 		    			try{
-			    			IpGeoMapping ipGeoMappingOrigin = tracerouteDao.getIpGeoMapping(trace.getOriginIp());
+			    			IpGeoMapping ipGeoMappingOrigin = tracerouteDao.getIpGeoMapping(trace.getSourceIp());
 			    			asTraceroute.setOriginCity(ipGeoMappingOrigin.getCity());
 			    			asTraceroute.setOriginCountry(ipGeoMappingOrigin.getCountryName());
 		    			} catch(Exception e){

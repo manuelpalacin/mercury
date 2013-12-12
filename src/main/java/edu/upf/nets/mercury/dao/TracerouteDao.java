@@ -10,6 +10,7 @@ import edu.upf.nets.mercury.pojo.Entity;
 import edu.upf.nets.mercury.pojo.IpGeoMapping;
 import edu.upf.nets.mercury.pojo.Trace;
 import edu.upf.nets.mercury.pojo.TracerouteIndex;
+import edu.upf.nets.mercury.pojo.TracerouteSession;
 
 public interface TracerouteDao {
 	
@@ -71,6 +72,11 @@ public interface TracerouteDao {
 	
 	public IpGeoMapping getIpGeoMapping(String ip);
 
-	
 	public boolean isUpdatedMapping(long ip);
+	
+	public void addTracerouteSession(TracerouteSession tracerouteSession);
+	
+	public void addTracerouteSession(String sessionId, String tracerouteGroupId);
+	
+	public TracerouteSession getTracerouteSession(String sessionId);
 }

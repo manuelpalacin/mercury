@@ -10,6 +10,7 @@ import edu.upf.nets.mercury.pojo.ASTraceroute;
 import edu.upf.nets.mercury.pojo.ASTracerouteRelationships;
 import edu.upf.nets.mercury.pojo.Trace;
 import edu.upf.nets.mercury.pojo.TracerouteIndex;
+import edu.upf.nets.mercury.pojo.TracerouteSession;
 
 @Service(value="tracerouteManager")
 public class TracerouteManagerImpl implements TracerouteManager {
@@ -82,6 +83,23 @@ public class TracerouteManagerImpl implements TracerouteManager {
 	@Override
 	public List<TracerouteIndex> getLastTracerouteIndexesList(int limit) {
 		return tracerouteDao.getLastTracerouteIndexesList(limit);
+	}
+
+	
+	@Override
+	public void addTracerouteSession(TracerouteSession tracerouteSession) {
+		tracerouteDao.addTracerouteSession(tracerouteSession);
+	}
+	
+	@Override
+	public void addTracerouteSession(String sessionId, String tracerouteGroupId) {
+		tracerouteDao.addTracerouteSession(sessionId, tracerouteGroupId);
+		
+	}
+
+	@Override
+	public TracerouteSession getTracerouteSession(String sessionId) {
+		return tracerouteDao.getTracerouteSession(sessionId);
 	}
 
 }

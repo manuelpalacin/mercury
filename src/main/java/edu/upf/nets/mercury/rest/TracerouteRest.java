@@ -6,6 +6,7 @@ import javax.ws.rs.core.Response;
 import edu.upf.nets.mercury.pojo.ASTraceroute;
 import edu.upf.nets.mercury.pojo.ASTracerouteRelationships;
 import edu.upf.nets.mercury.pojo.Traceroute;
+import edu.upf.nets.mercury.pojo.TracerouteSession;
 import edu.upf.nets.mercury.pojo.stats.ASTracerouteAggregationStat;
 import edu.upf.nets.mercury.pojo.stats.ASTracerouteStat;
 import edu.upf.nets.mercury.pojo.stats.ProcessingCurrentStatusStat;
@@ -35,5 +36,9 @@ public interface TracerouteRest {
 	public ASTracerouteAggregationStat getASTracerouteStatsByOriginCountry(String originCountry);
 
 	public ProcessingCurrentStatusStat getProcessingCurrentStatusStat();
+	
+	public TracerouteSession getTracerouteSession(String sessionId);
+	
+	public Response addTracerouteSession(HttpServletRequest req, TracerouteSession tracerouteSession);
 	
 }

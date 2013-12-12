@@ -23,14 +23,15 @@ import edu.upf.nets.mercury.pojo.Entity;
 import edu.upf.nets.mercury.pojo.IpGeoMapping;
 import edu.upf.nets.mercury.pojo.Trace;
 import edu.upf.nets.mercury.pojo.TracerouteIndex;
+import edu.upf.nets.mercury.pojo.TracerouteSession;
 
 @Repository(value="tracerouteDao")
 public class TracerouteDaoImpl implements TracerouteDao {
 	
 	private static final Logger log = Logger.getLogger(TracerouteDaoImpl.class.getName());
 	/*
-	“save” is means “insert it if record is not exists” and “update it if record is existed”, or simply saveOrUpdate().
-	“insert” is means “insert it if record is not exits” and “ignore it if record is existed”.
+	“save” is means “insert it if record not exists” and “update it if record is existed”, or simply saveOrUpdate().
+	“insert” is means “insert it if record not exits” and “ignore it if record existed”.
 	*/
 	
 	@Autowired
@@ -389,9 +390,29 @@ public class TracerouteDaoImpl implements TracerouteDao {
 						IpGeoMapping.class);
 	}
 
+	@Override
+	public void addTracerouteSession(TracerouteSession tracerouteSession) {
+		mongoTemplate.save(tracerouteSession);
+	}
 
-	
-	
+	@Override
+	public void addTracerouteSession(String sessionId, String tracerouteGroupId) {
+		TracerouteSession tracerouteSession = getTracerouteSession(sessionId);
+		if(tracerouteSession == null){
+			tracerouteSession = new TracerouteSession();
+			tracerouteSession.setSessionId(sessionId);
+			tracerouteSession.setDateStart(new Date());
+		}
+		tracerouteSession.addTracerouteGroupId(tracerouteGroupId);
+		mongoTemplate.save(tracerouteSession);
+	}
+
+	@Override
+	public TracerouteSession getTracerouteSession(String sessionId) {
+		return mongoTemplate.findOne(
+				new Query(Criteria.where("sessionId").is(sessionId)), 
+				TracerouteSession.class);
+	}
 	
 //	private long convertToDecimalIp(String ip){
 //		String[] ipPosition = ip.split("\\.");	
@@ -418,5 +439,8 @@ public class TracerouteDaoImpl implements TracerouteDao {
         }
         return num; 
     }
+
+
+
 
 }

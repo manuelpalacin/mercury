@@ -32,6 +32,7 @@ import edu.upf.nets.mercury.pojo.Hop;
 import edu.upf.nets.mercury.pojo.Trace;
 import edu.upf.nets.mercury.pojo.Traceroute;
 import edu.upf.nets.mercury.pojo.TracerouteIndex;
+import edu.upf.nets.mercury.pojo.TracerouteSession;
 import edu.upf.nets.mercury.pojo.stats.ASTracerouteAggregationStat;
 import edu.upf.nets.mercury.pojo.stats.ASTracerouteStat;
 import edu.upf.nets.mercury.pojo.stats.ProcessingCurrentStatusStat;
@@ -67,18 +68,26 @@ public class TracerouteRestImpl implements TracerouteRest {
 			 }
 		}
 		
-		String result = "Successful upload from "+srcIp+" at "+new Date()+":\n";
-		result = result + gson.toJson(traceroute);
-		
+		String tracerouteGroupId = "";
 		if(! traceroute.getHops().isEmpty()){
 			//Now we save the uploaded traceroute after adapting the response
 			List<Trace> traceList = convertTraceroute(traceroute, srcIp);
 			tracerouteManager.addTraceList(traceList);
-			String tracerouteGroupId = traceList.get(0).getTracerouteGroupId();
+			tracerouteGroupId = traceList.get(0).getTracerouteGroupId();
 			tracerouteManager.addTracerouteIndex(getTracerouteIndex(tracerouteGroupId));
-			result = result + "\nCheck the ASTraceroute id: "+tracerouteGroupId;
+			//Now we save the traceroute sessionId
+			if(traceroute.getSessionId() != null){
+				tracerouteManager.addTracerouteSession(
+						traceroute.getSessionId(), tracerouteGroupId);
+			}
 		} 
+		
 		//log.info(result);
+		String result = "{ \"status\":\"successful\", \"srcIp\":\""+srcIp+"\", " +
+				"\"date\":\""+new Date()+"\", " +
+				"\"tracerouteGroupId\":\""+tracerouteGroupId+"\", " +
+				"\"sessionId\":\""+traceroute.getSessionId()+"\" }";
+		//result = result + gson.toJson(traceroute);
 		log.info("Received traceroute from "+srcIp+" with destination "+traceroute.getDstName());
 		return Response.status(200).entity(result).build();
 	}
@@ -227,5 +236,28 @@ public class TracerouteRestImpl implements TracerouteRest {
 	@Produces(MediaType.APPLICATION_JSON)
 	public ProcessingCurrentStatusStat getProcessingCurrentStatusStat() {
 		return tracerouteStatsManager.getProcessingCurrentStatusStat();
+	}
+
+
+	@Override
+	@GET
+	@Path("/getTracerouteSession/{sessionId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public TracerouteSession getTracerouteSession(@PathParam("sessionId")String sessionId) {
+		return tracerouteManager.getTracerouteSession(sessionId);
+	}
+
+
+	@Override
+	@POST
+	@Path("/addTracerouteSession")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response addTracerouteSession(@Context HttpServletRequest req,
+			TracerouteSession tracerouteSession) {
+		 tracerouteManager.addTracerouteSession(tracerouteSession);
+			String result = "{ \"status\":\"successful\", \"srcIp\":\""+req.getRemoteAddr().toString()+"\", " +
+					"\"date\":\""+new Date()+"\", " +
+					"\"sessionId\":\""+tracerouteSession.getSessionId()+"\" }";
+		 return Response.status(200).entity(result).build();
 	}
 }

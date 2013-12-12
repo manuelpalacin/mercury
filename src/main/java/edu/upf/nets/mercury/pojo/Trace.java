@@ -25,7 +25,6 @@ public class Trace {
 	private String[] asn;
 	private String[] rtt;
 	
-	
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name="id")
@@ -112,6 +111,5 @@ public class Trace {
 	public void setRtt(String[] rtt) {
 		this.rtt = rtt;
 	}
-	
 
 }

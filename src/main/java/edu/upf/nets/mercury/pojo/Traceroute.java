@@ -10,6 +10,7 @@ public class Traceroute{
 	private String dstName;
 	private String srcName;
 	private List<Hop> hops;
+	private String sessionId;
 	
 	
 	public String getDstIp() {
@@ -45,7 +46,12 @@ public class Traceroute{
 	public void addHops(Hop hop) {
 		getHops().add(hop);
 	}
-
+	public String getSessionId() {
+		return sessionId;
+	}
+	public void setSessionId(String sessionId) {
+		this.sessionId = sessionId;
+	}
 	
 	public String toString(){
 		StringBuffer buffer = new StringBuffer();
@@ -53,6 +59,7 @@ public class Traceroute{
 		buffer.append("Destination Ip address: "+dstIp+"\n");
 		buffer.append("Source name: "+srcName+"\n");
 	    buffer.append("Destination name: "+dstName+"\n");
+	    buffer.append("Session Id: "+sessionId+"\n");
 	    buffer.append("Total number of hops: "+getHops().size()+"\n");
 	    buffer.append("Hops:\n");
 	    

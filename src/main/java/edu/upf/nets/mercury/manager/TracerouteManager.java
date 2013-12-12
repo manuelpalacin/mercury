@@ -6,6 +6,7 @@ import edu.upf.nets.mercury.pojo.ASTraceroute;
 import edu.upf.nets.mercury.pojo.ASTracerouteRelationships;
 import edu.upf.nets.mercury.pojo.Trace;
 import edu.upf.nets.mercury.pojo.TracerouteIndex;
+import edu.upf.nets.mercury.pojo.TracerouteSession;
 
 public interface TracerouteManager {
 	
@@ -32,5 +33,11 @@ public interface TracerouteManager {
 	public ASTracerouteRelationships getASTracerouteRelationships(String tracerouteGroupId);
 	
 	public List<TracerouteIndex> getLastTracerouteIndexesList(int limit);
+	
+	public void addTracerouteSession(TracerouteSession tracerouteSession);
+	
+	public void addTracerouteSession(String sessionId, String tracerouteGroupId);
+	
+	public TracerouteSession getTracerouteSession(String sessionId);
 
 }

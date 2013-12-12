@@ -30,8 +30,8 @@ public class TracerouteDaoImpl implements TracerouteDao {
 	
 	private static final Logger log = Logger.getLogger(TracerouteDaoImpl.class.getName());
 	/*
-	“save” is means “insert it if record not exists” and “update it if record is existed”, or simply saveOrUpdate().
-	“insert” is means “insert it if record not exits” and “ignore it if record existed”.
+	“save” means “insert it if record not exists” and “update it if record  exists”, or simply saveOrUpdate().
+	“insert”  means “insert it if record not exits” and “ignore it if record existed”.
 	*/
 	
 	@Autowired

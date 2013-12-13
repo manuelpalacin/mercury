@@ -14,6 +14,7 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Order;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import edu.upf.nets.mercury.pojo.ASName;
 import edu.upf.nets.mercury.pojo.ASRelationship;
@@ -391,12 +392,17 @@ public class TracerouteDaoImpl implements TracerouteDao {
 	}
 
 	@Override
-	public void addTracerouteSession(TracerouteSession tracerouteSession) {
-		mongoTemplate.save(tracerouteSession);
+	public synchronized void addTracerouteSession(TracerouteSession tracerouteSession) {
+		TracerouteSession tracerouteSessionAux = 
+				getTracerouteSession(tracerouteSession.getSessionId());
+		if(tracerouteSessionAux == null){
+			mongoTemplate.save(tracerouteSession);
+		}
 	}
 
 	@Override
-	public void addTracerouteSession(String sessionId, String tracerouteGroupId) {
+	public synchronized void addTracerouteSession(String sessionId, String tracerouteGroupId) {
+		log.info("Get traceroute session.");
 		TracerouteSession tracerouteSession = getTracerouteSession(sessionId);
 		if(tracerouteSession == null){
 			tracerouteSession = new TracerouteSession();
@@ -405,6 +411,7 @@ public class TracerouteDaoImpl implements TracerouteDao {
 		}
 		tracerouteSession.addTracerouteGroupId(tracerouteGroupId);
 		mongoTemplate.save(tracerouteSession);
+		log.info("Save traceroute session.");
 	}
 
 	@Override

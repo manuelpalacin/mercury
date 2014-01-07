@@ -186,6 +186,8 @@ public class TracerouteDaoImpl implements TracerouteDao {
 //		return entities;
 //	}
 	
+	//We must update this method. It is too much time consuming cause is a string query
+	
 	@Override
 	public List<Entity> getLastIpMappings(String ip2find) {
 		List<Entity> entities = new ArrayList<Entity>();

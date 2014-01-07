@@ -397,7 +397,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 	    		boolean done = false;
 	    		//log.info("START TRACES STEP");
 	    		for (Trace trace : tracesMapped) {
-	    			//taskExecutor.set
+	    			
 	    			ASHop asHop = new ASHop();
 	    			asHop.setHopId(trace.getHopId());
 	    			asHop.setHopIp(trace.getHopIp());
@@ -652,17 +652,12 @@ public class TaskProcessorImpl implements TaskProcessor{
 			asRelationship.setAsName0(asName0);
 			asRelationship.setAsName1(asName1);
 			
-			//Future<Overlap> futureOverlap = taskingManager.getSiblingRelationship(asName0, asName1);
-			//asRelationship.setOverlap(futureOverlap.get());
-			
 			asRelationship.setRelationship("same as"); //same AS
 			asRelationship.setSource("auto");
 			Date date = new Date();
 			asRelationship.setTimeStamp(date);
-			asRelationship.setLastUpdate(date);
-			
+			asRelationship.setLastUpdate(date);		
 			asRelationship.setMissingHops(missingHops);
-			
 			asRelationship.setIsIX(false);
 			asRelationship.setIsComplete(true);
 
@@ -688,8 +683,6 @@ public class TaskProcessorImpl implements TaskProcessor{
 			}
 			asRelationship.setAsName0(asName0);
 			asRelationship.setAsName1(asName1);
-//			Future<Overlap> futureOverlap = taskingManager.getSiblingRelationship(asName0, asName1);
-//			asRelationship.setOverlap(futureOverlap.get());
 			asRelationship.setMissingHops(missingHops);
 			asRelationship.setIsIX(false);
 			asRelationship.setIsComplete(true);
@@ -739,10 +732,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 				asName1 = asname1.getAsName();
 			}
 			asRelationship.setAsName1(asName1);
-//			Future<Overlap> futureOverlap = taskingManager.getSiblingRelationship(asName0, asName1);
-//			asRelationship.setOverlap(futureOverlap.get());
 			asRelationship.setMissingHops(missingHops + asRelationship.getMissingHops());
-			
 			asRelationship.setIsComplete(true);
 
 			// Save the relationship in the database.

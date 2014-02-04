@@ -35,7 +35,9 @@ public class Entity implements Cloneable{
 	private List<String> bgpPrefixes;
 	private List<Entity> participants;
 	private Map<String, Entity> participantsMap;
+	@Indexed
 	private long rangeLow;
+	@Indexed
 	private long rangeHigh;
 	private long numRangeIps;
 	private long ipNum;

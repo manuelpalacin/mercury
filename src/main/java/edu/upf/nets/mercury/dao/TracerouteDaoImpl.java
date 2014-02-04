@@ -14,7 +14,6 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Order;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 import edu.upf.nets.mercury.pojo.ASName;
 import edu.upf.nets.mercury.pojo.ASRelationship;
@@ -25,6 +24,8 @@ import edu.upf.nets.mercury.pojo.IpGeoMapping;
 import edu.upf.nets.mercury.pojo.Trace;
 import edu.upf.nets.mercury.pojo.TracerouteIndex;
 import edu.upf.nets.mercury.pojo.TracerouteSession;
+import edu.upf.nets.mercury.pojo.UnknownRange;
+import edu.upf.nets.mercury.pojo.stats.ASTracerouteStat;
 
 @Repository(value="tracerouteDao")
 public class TracerouteDaoImpl implements TracerouteDao {
@@ -38,6 +39,35 @@ public class TracerouteDaoImpl implements TracerouteDao {
 	@Autowired
 	MongoTemplate mongoTemplate;
 	
+	
+	@Override
+	public void dropDatabase() {
+		
+		resetEntireTracerouteIndexes();
+		
+		mongoTemplate.dropCollection(Entity.class);
+		mongoTemplate.dropCollection(IpGeoMapping.class);
+		mongoTemplate.dropCollection(ASTracerouteRelationships.class);
+		mongoTemplate.dropCollection(ASTraceroute.class);
+		mongoTemplate.dropCollection(ASTracerouteStat.class);
+		mongoTemplate.dropCollection(ASRelationship.class);
+	}
+	
+	@Override
+	public void dropEntireDatabase() {
+		mongoTemplate.dropCollection(Trace.class);
+		mongoTemplate.dropCollection(TracerouteIndex.class);
+		mongoTemplate.dropCollection(TracerouteSession.class);
+		
+		mongoTemplate.dropCollection(Entity.class);
+		mongoTemplate.dropCollection(IpGeoMapping.class);
+		mongoTemplate.dropCollection(ASTracerouteRelationships.class);
+		mongoTemplate.dropCollection(ASTraceroute.class);
+		mongoTemplate.dropCollection(ASTracerouteStat.class);
+		mongoTemplate.dropCollection(ASRelationship.class);
+	}
+	
+	
 	@Override
 	public void addTrace(Trace trace) {
 		mongoTemplate.save(trace);
@@ -47,6 +77,46 @@ public class TracerouteDaoImpl implements TracerouteDao {
 	public void addTraceList(List<Trace> traceList) {
 		mongoTemplate.insert(traceList,  Trace.class);
 	}
+	
+	@Override
+	public void resetTracerouteIndexes() {
+		Query query = new Query(new Criteria().orOperator(
+				Criteria.where("completed").is("PROCESSING"),
+				Criteria.where("completed").is("PENDING"),
+				Criteria.where("completed").is("ERROR")
+				));
+		
+		List<TracerouteIndex> tracerouteIndexes = mongoTemplate.find(query, TracerouteIndex.class);
+		List<TracerouteIndex> tracerouteIndexesAux = new ArrayList<TracerouteIndex>();
+		for (TracerouteIndex tracerouteIndex : tracerouteIndexes) {
+			tracerouteIndex.setCompleted("INCOMPLETED");
+			tracerouteIndexesAux.add(tracerouteIndex);
+		}
+		
+		updateTracerouteIndexes(tracerouteIndexesAux);
+		
+	}
+	
+	@Override
+	public void resetEntireTracerouteIndexes() {
+		Query query = new Query(new Criteria().orOperator(
+				Criteria.where("completed").is("COMPLETED"),
+				Criteria.where("completed").is("PROCESSING"),
+				Criteria.where("completed").is("PENDING"),
+				Criteria.where("completed").is("ERROR")
+				));
+		
+		List<TracerouteIndex> tracerouteIndexes = mongoTemplate.find(query, TracerouteIndex.class);
+		List<TracerouteIndex> tracerouteIndexesAux = new ArrayList<TracerouteIndex>();
+		for (TracerouteIndex tracerouteIndex : tracerouteIndexes) {
+			tracerouteIndex.setCompleted("INCOMPLETED");
+			tracerouteIndexesAux.add(tracerouteIndex);
+		}
+		
+		updateTracerouteIndexes(tracerouteIndexesAux);
+		
+	}
+	
 	
 	@Override
 	public void updateTraceList(List<Trace> traceList) {
@@ -63,7 +133,8 @@ public class TracerouteDaoImpl implements TracerouteDao {
 
 	@Override
 	public List<Trace> getTraceListByTracerouteGroupId(String tracerouteGroupId) {
-		mongoTemplate.indexOps("traces").ensureIndex(new Index("timeStamp", Order.ASCENDING));
+		mongoTemplate.indexOps("traces").ensureIndex(new Index("tracerouteGroupId", Order.ASCENDING));
+		//mongoTemplate.indexOps("traces").ensureIndex(new Index("timeStamp", Order.ASCENDING));
 		return mongoTemplate.find(
 				new Query( Criteria.where("tracerouteGroupId").is(tracerouteGroupId) ), 
 	            Trace.class);
@@ -81,37 +152,15 @@ public class TracerouteDaoImpl implements TracerouteDao {
 
 	@Override
 	public List<Entity> getIpMappings(String ip2find) {
+		
+		long ip = convertToDecimalIp(ip2find);
+		
 		return mongoTemplate.find(
-				new Query( Criteria.where("ip").is(ip2find) ), 
+				new Query( Criteria.where("rangeLow").lte(ip).
+						and("rangeHigh").gte(ip) ), 
 	            Entity.class);
 	}
 	
-//	@Override
-//	public List<Entity> getUpdatedIpMappings(String ip2find) {
-//		//We only accept mappings of the last month
-//		Calendar cal = Calendar.getInstance();
-//		cal.add(Calendar.MONTH, -1);
-//		
-//		return mongoTemplate.find(
-//				new Query( Criteria.where("ip").is(ip2find).						
-//						and("timeStamp").gt(cal.getTime()).
-//						and("source").is("http://www.team-cymru.org/Services/ip-to-asn.html") ), 
-//	            Entity.class);
-//	}
-
-//	@Override
-//	public boolean isPrivateIpMapping(String ip2find) {
-//		Entity entity = mongoTemplate.findOne(
-//				new Query( Criteria.where("ip").is(ip2find).
-//						and("number").is("private") ), 
-//	            Entity.class);
-//		if(entity!=null){
-//			return true;
-//		} else {
-//			return false;
-//		}
-//
-//	}
 	
 	
 	@Override
@@ -121,18 +170,27 @@ public class TracerouteDaoImpl implements TracerouteDao {
 		Calendar cal = Calendar.getInstance();
 		cal.add(Calendar.MONTH, -1);
 
-		mongoTemplate.indexOps("entities").ensureIndex(new Index("timeStamp", Order.ASCENDING));
-		mongoTemplate.indexOps("entities").ensureIndex(new Index("source", Order.ASCENDING));
-		mongoTemplate.indexOps("entities").ensureIndex(new Index("rangeLow", Order.ASCENDING));
-		mongoTemplate.indexOps("entities").ensureIndex(new Index("rangeHigh", Order.ASCENDING));
-		mongoTemplate.indexOps("entities").ensureIndex(new Index("numRangeIps", Order.ASCENDING));
-		mongoTemplate.indexOps("entities").ensureIndex(new Index("ipNum", Order.ASCENDING));
+		//mongoTemplate.indexOps("entities").ensureIndex(new Index("timeStamp", Order.ASCENDING));
+		//mongoTemplate.indexOps("entities").ensureIndex(new Index("rangeLow", Order.ASCENDING));
+		//mongoTemplate.indexOps("entities").ensureIndex(new Index("rangeHigh", Order.ASCENDING));
 
-		Query q = new Query(Criteria.where("timeStamp").gt(cal.getTime()).
+//		Query q = new Query(Criteria.where("timeStamp").gt(cal.getTime()).
+//				and("rangeLow").lte(ip).
+//				and("rangeHigh").gte(ip).
+//				and("source").is("http://www.team-cymru.org/Services/ip-to-asn.html")
+//				);
+		
+		
+		Query q = new Query(new Criteria().orOperator(
+				Criteria.where("timeStamp").gt(cal.getTime()).
 				and("rangeLow").lte(ip).
 				and("rangeHigh").gte(ip).
-				and("source").is("http://www.team-cymru.org/Services/ip-to-asn.html")
-				);
+				and("source").is("http://www.team-cymru.org/Services/ip-to-asn.html"),
+				Criteria.where("timeStamp").gt(cal.getTime()).
+				and("rangeLow").lte(ip).
+				and("rangeHigh").gte(ip).
+				and("source").is("https://stat.ripe.net/docs/data_api")
+				));
 
 		q.with(new Sort(Sort.Direction.ASC, "numRangeIps"));
 		q.fields().include("_id");
@@ -142,52 +200,7 @@ public class TracerouteDaoImpl implements TracerouteDao {
 	}
 	
 	
-	
-//	@Override
-//	public List<Entity> getLastIpMappings(String ip2find) {
-//		List<Entity> entities = new ArrayList<Entity>();
-//		
-//		Entity entityCymru;
-//		if( (entityCymru = mongoTemplate.findOne(
-//				new Query( Criteria.where("ip").is(ip2find).
-//						and("source").is("http://www.team-cymru.org/Services/ip-to-asn.html")).
-//						with(new Sort(Sort.Direction.ASC, "timeStamp")), 
-//				Entity.class)) != null){
-//			entities.add(entityCymru);
-//		}
-//		
-//		Entity entityEuroix;
-//		if( (entityEuroix = mongoTemplate.findOne(
-//				new Query( Criteria.where("ip").is(ip2find).
-//						and("source").is("https://www.euro-ix.net")).
-//						with(new Sort(Sort.Direction.ASC, "timeStamp")), 
-//				Entity.class)) != null ){
-//			entities.add(entityEuroix);
-//		}
-//		
-//		Entity entityPeeringdb;
-//		if( (entityPeeringdb = mongoTemplate.findOne(
-//				new Query( Criteria.where("ip").is(ip2find).
-//						and("source").is("https://www.peeringdb.com")).
-//						with(new Sort(Sort.Direction.ASC, "timeStamp")), 
-//				Entity.class)) != null ){
-//			entities.add(entityPeeringdb);
-//		}
-//		
-//		Entity entityManual;
-//		if( (entityManual = mongoTemplate.findOne(
-//				new Query( Criteria.where("ip").is(ip2find).
-//						and("source").is("manual")).
-//						with(new Sort(Sort.Direction.ASC, "timeStamp")), 
-//				Entity.class)) != null){
-//			entities.add(entityManual);
-//		}
-//		
-//		return entities;
-//	}
-	
 	//We must update this method. It is too much time consuming cause is a string query
-	
 	@Override
 	public List<Entity> getLastIpMappings(String ip2find) {
 		List<Entity> entities = new ArrayList<Entity>();
@@ -204,32 +217,45 @@ public class TracerouteDaoImpl implements TracerouteDao {
 			entities.add(entityCymru);
 		}
 		
-		Entity entityEuroix;
-		if( (entityEuroix = mongoTemplate.findOne(
-				new Query( Criteria.where("ip").is(ip2find).
-						and("source").is("https://www.euro-ix.net")).
+		//We change the code to optimize the query 
+		List<Entity> entityList;
+		if( (entityList = mongoTemplate.find(
+				new Query( Criteria.where("rangeLow").lte(ip).
+						and("rangeHigh").gte(ip).
+						and("source").ne("http://www.team-cymru.org/Services/ip-to-asn.html")).
 						with(new Sort(Sort.Direction.DESC, "timeStamp")), 
 				Entity.class)) != null ){
-			entities.add(entityEuroix);
+			entities.addAll(entityList);
 		}
 		
-		Entity entityPeeringdb;
-		if( (entityPeeringdb = mongoTemplate.findOne(
-				new Query( Criteria.where("ip").is(ip2find).
-						and("source").is("https://www.peeringdb.com")).
-						with(new Sort(Sort.Direction.DESC, "timeStamp")), 
-				Entity.class)) != null ){
-			entities.add(entityPeeringdb);
-		}
-		
-		Entity entityManual;
-		if( (entityManual = mongoTemplate.findOne(
-				new Query( Criteria.where("ip").is(ip2find).
-						and("source").is("manual")).
-						with(new Sort(Sort.Direction.DESC, "timeStamp")), 
-				Entity.class)) != null){
-			entities.add(entityManual);
-		}
+//		Entity entityEuroix;
+//		if( (entityEuroix = mongoTemplate.findOne(
+//				new Query( Criteria.where("rangeLow").lte(ip).
+//						and("rangeHigh").gte(ip).
+//						and("source").is("https://www.euro-ix.net")).
+//						with(new Sort(Sort.Direction.DESC, "timeStamp")), 
+//				Entity.class)) != null ){
+//			entities.add(entityEuroix);
+//		}
+//		
+//		Entity entityPeeringdb;
+//		if( (entityPeeringdb = mongoTemplate.findOne(
+//				new Query( Criteria.where("rangeLow").lte(ip).
+//						and("rangeHigh").gte(ip).
+//						and("source").is("https://www.peeringdb.com")).
+//						with(new Sort(Sort.Direction.DESC, "timeStamp")), 
+//				Entity.class)) != null ){
+//			entities.add(entityPeeringdb);
+//		}
+//		
+//		Entity entityManual;
+//		if( (entityManual = mongoTemplate.findOne(
+//				new Query( Criteria.where("ip").is(ip2find).
+//						and("source").is("manual")).
+//						with(new Sort(Sort.Direction.DESC, "timeStamp")), 
+//				Entity.class)) != null){
+//			entities.add(entityManual);
+//		}
 		
 		return entities;
 		
@@ -277,8 +303,8 @@ public class TracerouteDaoImpl implements TracerouteDao {
 	@Override
 	public List<TracerouteIndex> getTracerouteIndexesListToProcess(int limit) {
 		
-		mongoTemplate.indexOps("tracerouteindexes").ensureIndex(new Index("timeStamp", Order.ASCENDING));
-		mongoTemplate.indexOps("tracerouteindexes").ensureIndex(new Index("completed", Order.ASCENDING));
+		//mongoTemplate.indexOps("tracerouteindexes").ensureIndex(new Index("timeStamp", Order.ASCENDING));
+		//mongoTemplate.indexOps("tracerouteindexes").ensureIndex(new Index("completed", Order.ASCENDING));
 		Query query = new Query();
 		query.limit(limit).with(new Sort(Sort.Direction.ASC, "timeStamp"));
 		query.addCriteria(Criteria.where("completed").is("INCOMPLETED"));
@@ -436,18 +462,42 @@ public class TracerouteDaoImpl implements TracerouteDao {
 //		}
 //	}
 	
-	private long convertToDecimalIp(String ip) { 
+	private long convertToDecimalIp(String ipAddress) { 
         
-        long num = -1; 
-        if(null != ip){
-	        String[] addrArray = ip.split("\\.");
-	        for (int i = 0; i < addrArray.length; i++) { 
-	            int power = 3 - i;
-	            num += ((Integer.parseInt(addrArray[i]) % 256 * Math.pow(256, power))); 
-	        } 
-        }
-        return num; 
+		try {
+		long result = 0;
+		String[] ipAddressInArray = ipAddress.split("\\.");
+		for (int i = 3; i >= 0; i--) {
+			long ip = Long.parseLong(ipAddressInArray[3 - i]);
+			result |= ip << (i * 8);
+		}	 
+		return result;
+		} catch (Exception e){
+			log.info("The IP address is not a number: "+ipAddress);
+			
+			return 0;
+		}
     }
+
+	@Override
+	public void addUnknowRange(UnknownRange unknownRange) {
+		mongoTemplate.insert(unknownRange);
+		
+	}
+
+	@Override
+	public UnknownRange getUnknowRange(String ip) {
+		return mongoTemplate.findById(ip, UnknownRange.class);
+	}
+
+	@Override
+	public List<UnknownRange> getUnknowRanges(String range) {
+		return mongoTemplate.find(
+				new Query( Criteria.where("range").is(range) ), 
+				UnknownRange.class);
+	}
+
+
 
 
 

@@ -11,12 +11,21 @@ import edu.upf.nets.mercury.pojo.IpGeoMapping;
 import edu.upf.nets.mercury.pojo.Trace;
 import edu.upf.nets.mercury.pojo.TracerouteIndex;
 import edu.upf.nets.mercury.pojo.TracerouteSession;
+import edu.upf.nets.mercury.pojo.UnknownRange;
 
 public interface TracerouteDao {
+	
+	public void dropDatabase();
+	
+	public void dropEntireDatabase();
 	
 	public void addTrace(Trace trace);
 	
 	public void addTraceList(List<Trace> traceList);
+	
+	public void resetTracerouteIndexes();
+	
+	public void resetEntireTracerouteIndexes();
 	
 	public void updateTraceList(List<Trace> traceList);
 	
@@ -79,4 +88,10 @@ public interface TracerouteDao {
 	public void addTracerouteSession(String sessionId, String tracerouteGroupId);
 	
 	public TracerouteSession getTracerouteSession(String sessionId);
+	
+	public void addUnknowRange(UnknownRange unknownRange);
+	
+	public UnknownRange getUnknowRange(String ip);
+	
+	public List<UnknownRange> getUnknowRanges(String range);
 }

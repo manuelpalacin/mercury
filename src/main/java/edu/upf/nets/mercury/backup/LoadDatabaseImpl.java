@@ -3,8 +3,6 @@ package edu.upf.nets.mercury.backup;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.math.BigInteger;
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -103,25 +101,25 @@ public class LoadDatabaseImpl implements LoadDatabase{
 					// Step 2. Get CIDR mask
 					int mask = (-1) << (32 - Integer.parseInt(ip[1]));
 					// Step 3. Find lowest IP address
-					int lowest = addr & mask;
+					long rangeLow = addr & mask;
 					// Step 4. Find highest IP address
-					int highest = lowest + (~mask);
-	
-					// Step 5. Find all ips into the range
-					for (int i=lowest; i<=highest; i++){
-						entity = (Entity) ixp.clone();
-						int ipAddress = i;
-						byte[] bytes = BigInteger.valueOf(ipAddress).toByteArray();
-						InetAddress address = InetAddress.getByAddress(bytes);
-						entity.setIp(address.getHostAddress());
-						//ixp.setServerName(address.getHostName());
-						entity.setTimeStamp(new Date());
-						entity.setSource("https://www.euro-ix.net");
-						entity.setType("IXP");
-						entityList.add(entity);
-						//log.info("Added ip:"+address.getHostAddress());
-					}
-
+					long rangeHigh = rangeLow + (~mask);
+					// Step 5. NUmber of ips in range
+					long numRangeIps = rangeHigh - rangeLow;
+					/***
+					 * HERE WE HAVE MODIFIED CODE TO ADD ONLY RANGES
+					 */
+					entity = (Entity) ixp.clone();
+					entity.setIp("");
+					entity.setRangeLow(rangeLow);
+					entity.setRangeHigh(rangeHigh);
+					entity.setNumRangeIps(numRangeIps);
+					//ixp.setServerName(address.getHostName());
+					entity.setTimeStamp(new Date());
+					entity.setSource("https://www.euro-ix.net");
+					entity.setType("IXP");
+					entityList.add(entity);
+					//log.info("Added ip:"+address.getHostAddress());
 				}
 			}
 		}
@@ -165,34 +163,38 @@ public class LoadDatabaseImpl implements LoadDatabase{
 								// Step 2. Get CIDR mask
 								int mask = (-1) << (32 - Integer.parseInt(ip[1]));
 								// Step 3. Find lowest IP address
-								int lowest = addr & mask;
+								long rangeLow = addr & mask;
 								// Step 4. Find highest IP address
-								int highest = lowest + (~mask);
+								long rangeHigh = rangeLow + (~mask);
+								// Step 5. NUmber of ips in range
+								long numRangeIps = rangeHigh - rangeLow;
 						
-								// Step 5. Find all ips into the range
-								for (int i=lowest; i<=highest; i++){
-									entity = (Entity) ixp.clone();
-									found = true;
-									entity.setParticipants(null);
-									entity.addParticipants((Entity)participant.clone());
-									int ipAddress = i;
-									byte[] bytes = BigInteger.valueOf(ipAddress).toByteArray();
-									InetAddress address = InetAddress.getByAddress(bytes);
-									entity.setIp(address.getHostAddress());
-									//ixp.setServerName(address.getHostName());
-									entity.setTimeStamp(new Date());
-									entity.setSource("https://www.peeringdb.com");
-									entity.setType("AS in IXP");
-									entityList.add(entity);
+								/***
+								 * HERE WE HAVE MODIFIED CODE TO ADD ONLY RANGES
+								 */
 
-								}
-								
+								entity = (Entity) ixp.clone();
+								found = true;
+								entity.setParticipants(null);
+								entity.addParticipants((Entity)participant.clone());
+								entity.setIp("");
+								entity.setRangeLow(rangeLow);
+								entity.setRangeHigh(rangeHigh);
+								entity.setNumRangeIps(numRangeIps);
+								//ixp.setServerName(address.getHostName());
+								entity.setTimeStamp(new Date());
+								entity.setSource("https://www.peeringdb.com");
+								entity.setType("AS in IXP");
+								entityList.add(entity);
+
 							}
 						}
 					}
 					//If exact match
 					else {
-						
+						/***
+						 * HERE WE HAVE MODIFIED CODE TO ADD ONLY RANGES WITH EXACT
+						 */
 						Matcher matcher;
 						String patternIp = "^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})";
 						if ((matcher = Pattern.compile(patternIp).matcher(ipRaw)).find()){
@@ -202,6 +204,9 @@ public class LoadDatabaseImpl implements LoadDatabase{
 							entity.setParticipants(null);
 							entity.addParticipants((Entity)participant.clone());
 							entity.setIp(ipRaw);
+							entity.setRangeLow(ipToLong(ipRaw));
+							entity.setRangeHigh(ipToLong(ipRaw));
+							entity.setNumRangeIps(1);
 							entity.setTimeStamp(new Date());
 							entity.setSource("https://www.peeringdb.com");
 							entity.setType("AS in IXP");
@@ -234,31 +239,36 @@ public class LoadDatabaseImpl implements LoadDatabase{
 								// Step 2. Get CIDR mask
 								int mask = (-1) << (32 - Integer.parseInt(ip[1]));
 								// Step 3. Find lowest IP address
-								int lowest = addr & mask;
+								long rangeLow = addr & mask;
 								// Step 4. Find highest IP address
-								int highest = lowest + (~mask);
+								long rangeHigh = rangeLow + (~mask);
+								// Step 5. NUmber of ips in range
+								long numRangeIps = rangeHigh - rangeLow;
 				
-								// Step 5. Find all ips into the range
-								for (int i=lowest; i<=highest; i++){
-									entity = (Entity) ixp.clone();
-									found = true;
-									entity.setParticipants(null);
-									int ipAddress = i;
-									byte[] bytes = BigInteger.valueOf(ipAddress).toByteArray();
-									InetAddress address = InetAddress.getByAddress(bytes);
-									entity.setIp(address.getHostAddress());
-									//ixp.setServerName(address.getHostName());
-									entity.setTimeStamp(new Date());
-									entity.setSource("https://www.peeringdb.com");
-									entity.setType("IXP");
-									entityList.add(entity);
-									//log.info("Added ip:"+address.getHostAddress());
-								}
-								
+								/***
+								 * HERE WE HAVE MODIFIED CODE TO ADD ONLY RANGES
+								 */
+								entity = (Entity) ixp.clone();
+								found = true;
+								entity.setParticipants(null);
+								entity.setIp("");
+								entity.setRangeLow(rangeLow);
+								entity.setRangeHigh(rangeHigh);
+								entity.setNumRangeIps(numRangeIps);
+								//ixp.setServerName(address.getHostName());
+								entity.setTimeStamp(new Date());
+								entity.setSource("https://www.peeringdb.com");
+								entity.setType("IXP");
+								entityList.add(entity);
+								//log.info("Added ip:"+address.getHostAddress());
 							}
 						}
 					
 					} else {
+						
+						/***
+						 * HERE WE HAVE MODIFIED CODE TO ADD ONLY RANGES WITH EXACT
+						 */
 						Matcher matcher;
 						String patternIp = "^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})";
 						if ((matcher = Pattern.compile(patternIp).matcher(ipRaw)).find()){
@@ -267,6 +277,9 @@ public class LoadDatabaseImpl implements LoadDatabase{
 							found = true;
 							entity.setParticipants(null);
 							entity.setIp(ipRaw);
+							entity.setRangeLow(ipToLong(ipRaw));
+							entity.setRangeHigh(ipToLong(ipRaw));
+							entity.setNumRangeIps(1);
 							entity.setTimeStamp(new Date());
 							entity.setSource("https://www.peeringdb.com");
 							entity.setType("IXP");
@@ -283,7 +296,6 @@ public class LoadDatabaseImpl implements LoadDatabase{
     	if (! entityList.isEmpty()){
     		int size = entityList.size();
     		log.info("size: "+size);
-
     		tracerouteDao.addIpMappings(entityList);
     		
     	}
@@ -338,62 +350,56 @@ public class LoadDatabaseImpl implements LoadDatabase{
 	@Override
 	public void addPrivateIpMappings(){
 		List<Entity> entityList = new ArrayList<Entity>();
-		Entity entity;
+		Entity entityA, entityB, entityC;
 		
-//		for(int k=0; k<256;k++){
-//			for(int i=0; i<256; i++){
-//				for(int j=0; j<256; j++){
-//					entity = new Entity();
-//					entity.setIp("10."+k+"."+i+"."+j);
-//					entity.setName("Private network");
-//					entity.setNumber("private");
-//					entityList.add(entity);
-//				}
-//			}
-//		}
+		//Class A private addresses
+		entityA = new Entity();
+		entityA.setIp("10.Z.Y.X/8");
+		entityA.setName("Private network");
+		entityA.setNumber("private");
+		long ipLowA = ipToLong("10.0.0.0");
+		entityA.setRangeLow(ipLowA);
+		long ipHighA = ipToLong("10.255.255.255");
+		entityA.setRangeHigh(ipHighA);
+		entityA.setNumRangeIps(ipHighA-ipLowA);
+		entityA.setType("AS");
+		entityList.add(entityA);
+
 		
-//		for(int k=16; k<32;k++){
-//			for(int i=0; i<256; i++){
-//				for(int j=0; j<256; j++){
-//					entity = new Entity();
-//					entity.setIp("172."+k+"."+i+"."+j);
-//					entity.setName("Private network");
-//					entity.setNumber("private");
-//					entityList.add(entity);
-//				}
-//			}
-//		}
+		//Class B private addresses
+		entityB = new Entity();
+		entityB.setIp("172.16.Y.X/12");
+		entityB.setName("Private network");
+		entityB.setNumber("private");
+		long ipLowB = ipToLong("172.16.0.0");
+		entityB.setRangeLow(ipLowB);
+		long ipHighB = ipToLong("172.31.255.255");
+		entityB.setRangeHigh(ipHighB);
+		entityB.setNumRangeIps(ipHighB-ipLowB);
+		entityB.setType("AS");
+		entityList.add(entityB);
 		
-		for(int i=0; i<256; i++){
-			for(int j=0; j<256; j++){
-				entity = new Entity();
-				entity.setIp("192.168."+i+"."+j);
-				entity.setName("Private network");
-				entity.setNumber("private");
-				entityList.add(entity);
-			}
-		}
-		
-		for(int i=0; i<256; i++){
-			for(int j=0; j<256; j++){
-				entity = new Entity();
-				entity.setIp("169.254."+i+"."+j);
-				entity.setName("Private network");
-				entity.setNumber("private");
-				entityList.add(entity);
-			}
-		}
+		//Class C private addresses
+		entityC = new Entity();
+		entityC.setIp("192.168.Y.X/16");
+		entityC.setName("Private network");
+		entityC.setNumber("private");
+		long ipLowC = ipToLong("192.168.0.0");
+		entityC.setRangeLow(ipLowC);
+		long ipHighC = ipToLong("192.168.255.255");
+		entityC.setRangeHigh(ipHighC);
+		entityC.setNumRangeIps(ipHighC-ipLowC);
+		entityC.setType("AS");
+		entityList.add(entityC);
 		
 		
 		log.info("Finished Adding ips. Ready to store in the database");
     	if (! entityList.isEmpty()){
     		int size = entityList.size();
     		log.info("size: "+size);
-
     		tracerouteDao.addIpMappings(entityList);
-    		
     	}
-    	log.info("Finished Adding ips to database");
+    	log.info("Finished Adding Private ips to database");
 	}
 	
 	@Override
@@ -427,5 +433,16 @@ public class LoadDatabaseImpl implements LoadDatabase{
 			// log.info("Problems opening caida as names file");
 		}
 
+	}
+	
+	
+	private long ipToLong(String ipAddress) {
+		long result = 0;
+		String[] ipAddressInArray = ipAddress.split("\\.");
+		for (int i = 3; i >= 0; i--) {
+			long ip = Long.parseLong(ipAddressInArray[3 - i]);
+			result |= ip << (i * 8);
+		}	 
+		return result;
 	}
 }

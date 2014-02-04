@@ -3,12 +3,15 @@ package edu.upf.nets.mercury.task;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -17,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import com.maxmind.geoip.Location;
 
+import edu.upf.nets.mercury.backup.LoadDatabase;
 import edu.upf.nets.mercury.dao.GeoIpDatabase;
 import edu.upf.nets.mercury.dao.MappingDao;
 import edu.upf.nets.mercury.dao.TracerouteDao;
@@ -31,7 +35,6 @@ import edu.upf.nets.mercury.pojo.ASTracerouteRelationships;
 import edu.upf.nets.mercury.pojo.Entities;
 import edu.upf.nets.mercury.pojo.Entity;
 import edu.upf.nets.mercury.pojo.IpGeoMapping;
-import edu.upf.nets.mercury.pojo.Overlap;
 import edu.upf.nets.mercury.pojo.Trace;
 import edu.upf.nets.mercury.pojo.TracerouteIndex;
 import edu.upf.nets.mercury.pojo.stats.ASTracerouteStat;
@@ -44,10 +47,20 @@ public class TaskProcessorImpl implements TaskProcessor{
 	//This variable gets information to prevent multiple taskProcessors if not finished
 	public static boolean active = false;
 	
+	private static final String IPADDRESS_PATTERN = 
+			"^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
+			"([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
+			"([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
+			"([01]?\\d\\d?|2[0-4]\\d|25[0-5])$";
+	private Pattern pattern = Pattern.compile(IPADDRESS_PATTERN);
+	private Matcher matcher;
+	
 	private double maxCpuLoad = -1;
 	private double maxSystemMemoryLoad = -1;
 	private double maxJVMMemoryLoad = -1;
 	private boolean monitoringEnabled = false;
+	
+	private boolean startupStatus = false;
 	
 	@Autowired
     ApplicationContext context;
@@ -63,6 +76,8 @@ public class TaskProcessorImpl implements TaskProcessor{
 	MappingDao mappingDao;
 	@Autowired
 	GeoIpDatabase geoIpDatabase;
+	@Autowired
+	LoadDatabase loadDatabase;
 	
 	@Autowired
 	ThreadPoolTaskExecutor taskExecutor;
@@ -70,7 +85,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 	List<Entity> entityList;
 	List<TracerouteIndex> tracerouteIndexes;
 	List<Trace> traceList;
-	List<String> ips;
+	Set<String> ips;
 	List<TracerouteIndex> tracerouteIndexesPending;
 	List<String> geoips;
 
@@ -86,6 +101,11 @@ public class TaskProcessorImpl implements TaskProcessor{
 	        if(getServerUsage()){
 	        	//Here we block taskProcessor for future processings
 				active = true;
+				
+				//0. Remove the entire database and load Entity values
+				log.info("STEP-0");
+				loadStartupConfig();
+				
 	        	//1. Load incomplete tracerouteIndexes from mongodb
 				log.info("STEP-1");
 	        	loadTracerouteIndexesToProcess();
@@ -186,11 +206,49 @@ public class TaskProcessorImpl implements TaskProcessor{
 
     }
 
+    
+    //0. Reset the database if it is required
+    private boolean loadStartupConfig(){
+    	
+    	if(startupStatus == false){
+	    	Properties prop = new Properties();
+			try {
+				prop.load(context.getResource(
+						"classpath:mongo/mongodb.properties").getInputStream());
+				
+				boolean initialStatus = Boolean.parseBoolean(prop.getProperty("mongo.initialStatus"));
+				
+				//We load the database with the initial entities
+				if(initialStatus){
+					//Remove all database
+					tracerouteDao.dropDatabase();
+					loadDatabase.laodIpsInIxpOfPeeringdb();
+					loadDatabase.loadIpsInIxpOfEuroix();
+					//loadDatabase.addPrivateIpMappings(); //We do not need this
+					loadDatabase.loadCaidaRelationships();
+					loadDatabase.addASNames();
+				}
+				
+				startupStatus = true;
+				return true;
+				
+			} catch (IOException e) {
+				log.info("Error opening monitoring.properties file\n" + e.toString());
+				return false;
+			}
+    	}
+		return false;
+    	
+    }
+    
 	//1. Get incomplete tracerouteIndexes from mongodb
 	private void loadTracerouteIndexesToProcess(){
-		ips = new ArrayList<String>();
+		ips = new HashSet<String>();
 		geoips = new ArrayList<String>();
 		traceList = new ArrayList<Trace>();
+		//First we reset pending and processing indexes
+		tracerouteDao.resetTracerouteIndexes();
+		//Then we get XX indexes to process
     	tracerouteIndexes = tracerouteDao.getTracerouteIndexesListToProcess(100); //Number of TR to process
     	List<TracerouteIndex> tracerouteIndexesProcessing = new ArrayList<TracerouteIndex>();
     	for (TracerouteIndex tracerouteIndex : tracerouteIndexes) {
@@ -204,7 +262,11 @@ public class TaskProcessorImpl implements TaskProcessor{
     		//1.2 We need to add the destinationIP because some traceroutes do not include it as a hop
     		ips.add(auxList.get(0).getDestinationIp());
     		//1.3 We need to add the sourceIP to process
-    		ips.add(auxList.get(0).getSourceIp());
+    		if(validateIp(auxList.get(0).getSourceIp())){
+    			if (! isPrivateIp(convertToDecimalIp(auxList.get(0).getSourceIp()))){
+    				ips.add(auxList.get(0).getSourceIp());
+    			}
+    		}
     		//1.4 We need to add the geo destinationIP because some traceroutes do not include it as a hop
     		geoips.add(auxList.get(0).getDestinationIp());
     		//1.5 We need to add the geo sourceIP to process
@@ -231,13 +293,14 @@ public class TaskProcessorImpl implements TaskProcessor{
     	
     		
     		//2. Check if the ip is already introduced in mongodb in the last month
-    		if(!ip2find.equalsIgnoreCase("destination unreachable")){
+    		if( validateIp(ip2find) ){
     			// Convert the IP to numeric.
-    			long ip = convertToDecimalIp(ip2find);
+    			long ip = convertToDecimalIp(ip2find); 
     			// If the IP is not private.
-    			if(!this.isPrivateIp(ip)) {
+    			if(! isPrivateIp(ip)) {
 	    			if(!tracerouteDao.isUpdatedMapping(ip)){
 		        		//Add ip to process later in 3
+	    				
 		        		ips.add(ip2find);
 		        		//log.info("TEST: "+ip2find);
 	        		} else{
@@ -275,14 +338,17 @@ public class TaskProcessorImpl implements TaskProcessor{
         	if(asMappings==null){
         		return false;
         	}
-        	for (Entity entity : asMappings.getEntities()) {
-				//4. Obtain server name for the ip. Very Time CONSUMING!!
-				//Future<String> serverName = taskingManager.getNameserver(entity.getIp());
-        		//entity.setServerName(serverName.get());
-				entity.setTimeStamp(new Date());
-				//log.info(entity.toString());
-				entityList.add(entity);
-			}
+        	
+        	entityList.addAll(asMappings.getEntities());
+        	
+//        	for (Entity entity : asMappings.getEntities()) {
+//				//4. Obtain server name for the ip. Very Time CONSUMING!!
+//				//Future<String> serverName = taskingManager.getNameserver(entity.getIp());
+//        		//entity.setServerName(serverName.get());
+//				entity.setTimeStamp(new Date());
+//				//log.info(entity.toString());
+//				entityList.add(entity);
+//			}
     	}
     	//3.1. Introduce entities into mongodb
     	if (! entityList.isEmpty()){
@@ -403,7 +469,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 	    			asHop.setHopIp(trace.getHopIp());
 	    			//We obtain the last IP mapping from each source (euroix, peeringdb, cymry,manual)
 	    			//log.info("<<<<<<<<<<<<<<<<<<<<<<<<< START GET ENTITIES");
-	    			if(! trace.getHopIp().equals("destination unreachable")){
+	    			if( validateIp(trace.getHopIp()) ) {
 		    			List<Entity> entities = tracerouteDao.getLastIpMappings(trace.getHopIp());
 		    			//log.info("<<<<<<<<<<<<<<<<<<<<<<<<< START END ENTITIES");
 		    			for (Entity entity : entities) {
@@ -489,23 +555,54 @@ public class TaskProcessorImpl implements TaskProcessor{
 	    		int missingHops = 0;
 	    		
 	    		//Workaround to solve LAN IPs
-	    		String originIp = "";
-	    		try{
-	    			originIp = asTraceroute.getAsHops().get(0).getHopIp();
-	    		} catch (Exception e){
-		    		for (ASHop asHopFinding : asTraceroute.getAsHops()) {
-		    			if(asHopFinding.getHopIp().equals(asTraceroute.getOriginIp())){
-		    				originIp = asTraceroute.getOriginIp();
-		    				log.info("Using NAT public IP");
-		    				break;
-		    			}
-					}
-	    		}
+//	    		String originIp = "";
+//	    		try{
+//	    			originIp = asTraceroute.getAsHops().get(0).getHopIp();
+//	    		} catch (Exception e){
+//		    		for (ASHop asHopFinding : asTraceroute.getAsHops()) {
+//		    			if(asHopFinding.getHopIp().equals(asTraceroute.getOriginIp())){
+//		    				originIp = asTraceroute.getOriginIp();
+//		    				log.info("Using NAT public IP");
+//		    				break;
+//		    			}
+//					}
+//	    		}
+	    		
+	    		//Workaround to solve LAN IPs
+	    		String originAS = asTraceroute.getOriginAS();
+	    		int lanHops = 0;
+	    		boolean foundOriginAS = false;
+		    	for (ASHop asHopFinding : asTraceroute.getAsHops()){
+		    		try {
+			    		if(asHopFinding.getEntities().get(0).getAsNumber().equals(originAS)){
+			    			foundOriginAS = true;
+			    			break;
+			    		} else {
+			    			break;
+			    		}
+			    	} catch (Exception e){
+			    		lanHops++;	
+			    	}
+		    	}
+		    	
+		    	if(foundOriginAS == false && lanHops>0){
+		    		Entity entityForLan = new Entity();
+		    		entityForLan.setNumber(asTraceroute.getOriginAS());
+		    		entityForLan.setName(asTraceroute.getOriginASName());
+		    		entityForLan.setType("AS");
+		    		entityForLan.setSource("manual");
+		    		entityForLan.setTimeStamp(new Date());
+		    		//Now we add the entity to the last LAN hop and the AS type
+		    		asTraceroute.getAsHops().get(lanHops-1).addEntity(entityForLan);
+		    		asTraceroute.getAsHops().get(lanHops-1).addAsType("AS");
+		    	}
+	    		
+	    		
 
 	    		//log.info("END ASRELS");
 	    		
 	    		
-//	    		if(asTraceroute.getTracerouteGroupId().equals("29bbda39-e3ee-45c8-a585-43ece8d5971a")) {
+//	    		if(asTraceroute.getTracerouteGroupId().equals("b05ed7ff-cf7a-432e-91ce-31f4615ff9b1")) {
 //	    			log.warning("Our traceroute");
 //	    		}
 	    		
@@ -689,7 +786,7 @@ public class TaskProcessorImpl implements TaskProcessor{
 			
 
 
-			//Workaround to solve "not found" for interconection relationships in IXPs 
+			//Workaround to solve "not found" for interconnection relationships in IXPs 
 			if(asRelationship.getRelationship().equals("not found")){
 				if((currHop.getAsTypes().contains("IXP")) || (currHop.getAsTypes().contains("AS in IXP")) ){
 					asRelationship.setRelationship("ixp interconnection"); //interconnection in IXP
@@ -879,23 +976,42 @@ public class TaskProcessorImpl implements TaskProcessor{
 //		}
 //	}
 	
-	private long convertToDecimalIp(String ip) { 
-        String[] addrArray = ip.split("\\.");
-        long num = 0; 
-        for (int i = 0; i < addrArray.length; i++) { 
-            int power = 3 - i;
-            num += ((Integer.parseInt(addrArray[i]) % 256 * Math.pow(256, power))); // (% 256) == (& 0xFF) ; Math.pow(256,power) == (<< 8 * power) 
-        } 
-        return num; 
+	private long convertToDecimalIp(String ipAddress) { 
+//        String[] addrArray = ipAddress.split("\\.");
+//        long num = 0; 
+//        for (int i = 0; i < addrArray.length; i++) { 
+//            int power = 3 - i;
+//            num += ((Integer.parseInt(addrArray[i]) % 256 * Math.pow(256, power))); // (% 256) == (& 0xFF) ; Math.pow(256,power) == (<< 8 * power) 
+//        } 
+//        return num; 
+		
+		try {
+		long result = 0;
+		String[] ipAddressInArray = ipAddress.split("\\.");
+		for (int i = 3; i >= 0; i--) {
+			long ip = Long.parseLong(ipAddressInArray[3 - i]);
+			result |= ip << (i * 8);
+		}	 
+		return result;
+		} catch (Exception e){
+			log.info("The IP address is not a number: "+ipAddress);
+			
+			return 0;
+		}
     }
 
 	private boolean isPrivateIp(long ip){
-		
-		if( ( 0x0A000000 <= ip 	&& ip <= 0x0AFFFFFF ) || 
-			( 0xAC100000 <= ip 	&& ip <= 0xAC1FFFFF) || 
-			( 0xC0A80000 <= ip 	&& ip <= 0xC0A8FFFF ) ){
+	
+		if( ( 0x0A000000L <= ip 	&& ip <= 0x0AFFFFFFL ) || 
+			( 0xAC100000L <= ip 	&& ip <= 0xAC1FFFFFL ) || 
+			( 0xC0A80000L <= ip 	&& ip <= 0xC0A8FFFFL ) ){
 			return true;
 		}
 		return false;
 	}
+	
+	private boolean validateIp(String ip){		  
+		matcher = pattern.matcher(ip);
+		return matcher.matches();	    	    
+    }
 }

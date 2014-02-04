@@ -49,7 +49,8 @@ public class ASHop {
 		this.ipGeoMapping = ipGeoMapping;
 	}
 	public Entity getKnownEntity() {
-		if(null == this.entities) return null;
+		if(null == this.entities) 
+			return null;
 		Entity entityAs = null;
 		Entity entityIxp = null;
 		Entity entityAsInIxp = null;

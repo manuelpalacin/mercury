@@ -7,6 +7,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "tracerouteindexes")
@@ -14,7 +15,9 @@ public class TracerouteIndex {
 	
 	private String id;
 	private String tracerouteGroupId;
+	@Indexed
 	private String completed;
+	@Indexed
 	private Date timeStamp;
 	private Date lastUpdate;
 	

@@ -8,13 +8,16 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
 import org.springframework.data.annotation.Transient;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "asrelationships")
 public class ASRelationship {
 	
 	private String id;
+	@Indexed
 	private String as0;
+	@Indexed
 	private String as1;
 	private String asName0;
 	private String asName1;

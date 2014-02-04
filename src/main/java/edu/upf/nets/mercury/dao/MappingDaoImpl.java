@@ -10,13 +10,16 @@ import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.logging.Logger;
 
+import org.codehaus.jettison.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Repository;
@@ -31,6 +34,7 @@ import edu.upf.nets.mercury.pojo.Entities;
 import edu.upf.nets.mercury.pojo.Entity;
 import edu.upf.nets.mercury.pojo.IpGeoMapping;
 import edu.upf.nets.mercury.pojo.Overlap;
+import edu.upf.nets.mercury.pojo.UnknownRange;
 
 @Repository(value="mappingDao")
 public class MappingDaoImpl implements MappingDao {
@@ -41,11 +45,14 @@ public class MappingDaoImpl implements MappingDao {
 	@Autowired
     ApplicationContext context;
 
+	@Autowired
+	TracerouteDao tracerouteDao;
+	
 	Gson gson = new Gson();
 	private String server;
 	private int port;
 	private Map<String, String> weakwordsMap;
-	
+	private List<String> ixpMap;
 
 
 	
@@ -151,90 +158,191 @@ public class MappingDaoImpl implements MappingDao {
 
 	
 	@Override
-	public Entities getAsMappingsDNS(List<String> ips) {
+	public Entities getAsMappingsDNS(Set<String> ips) {
 		Entities entities = new Entities();
-
+		List<String> failedIps = new ArrayList<String>();
+		
 		for (String ip : ips) {
 			int count = 0;
-			int maxTries = 3;
+			int maxTries = 2;
 			while(true){
 				try{
-					
+
 					String[] octets = ip.split("\\.");
 					String reversedIp = octets[3]+"."+octets[2]+"."+octets[1]+"."+octets[0];
-			    	String query = reversedIp + ".origin.asn.cymru.com";
-			    	String line = "";
-		    	
-			    	Lookup l = new Lookup(query, Type.TXT, DClass.IN);
-			    	l.setResolver(new SimpleResolver());
-			    	l.run();
-			    	
-				    	if (l.getResult() == Lookup.SUCCESSFUL){
-				    		line = l.getAnswers()[0].rdataToString();
-				    		line = line.substring(1, line.length()-1);
-				    		String[] params = line.split("\\|");
-							if (params.length <= 5) {
+					String query = reversedIp + ".origin.asn.cymru.com";
+					String line = "";
 
-									String asName = "NA";
-									
-									try{
-										query = "AS" + params[0].trim() + ".asn.cymru.com";
-										l = new Lookup(query, Type.TXT, DClass.IN);
-								    	l.setResolver(new SimpleResolver());
-								    	l.run();
-								    	if (l.getResult() == Lookup.SUCCESSFUL){
-								    		line = l.getAnswers()[0].rdataToString();
-								    		line = line.substring(1, line.length()-1);
-								    		String[] params2 = line.split("\\|");
-								    		if (params2.length <= 5) {
-								    			asName = params2[4].trim();
-								    		}
-								    		
-								    	} else{
-								    		asName = "NA";
-								    	}
-									}catch(Exception e){
-										asName = "NA";
+					Lookup l = new Lookup(query, Type.TXT, DClass.IN);
+					l.setResolver(new SimpleResolver());
+					l.run();
+
+					if (l.getResult() == Lookup.SUCCESSFUL){
+						line = l.getAnswers()[0].rdataToString();
+						line = line.substring(1, line.length()-1);
+						String[] params = line.split("\\|");
+						if (params.length <= 5) {
+							String asName = "Not found";
+							try{
+								query = "AS" + params[0].trim() + ".asn.cymru.com";
+								l = new Lookup(query, Type.TXT, DClass.IN);
+								l.setResolver(new SimpleResolver());
+								l.run();
+								if (l.getResult() == Lookup.SUCCESSFUL){
+									line = l.getAnswers()[0].rdataToString();
+									line = line.substring(1, line.length()-1);
+									String[] params2 = line.split("\\|");
+									if (params2.length <= 5) {
+										asName = params2[4].trim();
 									}
 
-	
-									entities.addEntity(
-											buildEntity(ip, params[0].trim(), asName, params[1].trim(), params[2].trim(), params[3].trim())
-										);
-									
+								} else{
+									asName = "Not found";
+								}
+							}catch(Exception e){
+								asName = "Not found";
 							}
-				    	
-							//If IP found and processed
-							break;
 							
-				    	} else {
-				    		if (++count == maxTries){ 
-				    			log.info("ERROR with IP: "+ip+". The DNS does not match the IP.");
-				    			entities.addEntity(
-										buildEntity(ip, "", "NA", "", "", "")
+							entities.addEntity(
+									buildEntity(ip, params[0].trim(), asName, params[1].trim(), params[2].trim(), params[3].trim(), "http://www.team-cymru.org/Services/ip-to-asn.html")
 									);
-				    			break;
-				    		}
-				    	}
-			    	
-		    	} catch(Exception e){
-		    		if (++count == maxTries){ 
-		    			log.info("ERROR with IP: "+ip+". Too much retries.");
-		    			entities.addEntity(
-								buildEntity(ip, "", "NA", "", "", "")
-							);
-		    			break;
-		    		}
-		    	}
+						}
+
+						//If IP found and processed
+						break;
+
+					} else {
+						if (++count == maxTries){ 
+							log.info("ERROR with IP: "+ip+". The Cymru DNS does not match the IP.");
+							failedIps.add(ip);
+							break;
+						}
+					}
+
+				} catch(Exception e){
+					if (++count == maxTries){ 
+						log.info("ERROR with IP: "+ip+". Too much retries.");
+						failedIps.add(ip);
+						break;
+					}
+				}
 			}
 		}
-		log.info("Number of IPs: "+entities.getEntities().size());
+		log.info("Number of IPs processed by Cymru: "+entities.getEntities().size() +"\n" +
+				"Number of IPs not processed by Cymru: "+failedIps.size());
+		
+		//Finally we check failed ips with RIPE
+		entities.getEntities().addAll(getAsMappingsRIPE(failedIps).getEntities());
     	return entities;
 	}
 	
 	
+	@Override
+	public Entities getAsMappingsRIPE(List<String> ips) {
+		
+		Entities entities = new Entities();
+		String requestNw = "";
+		String requestASN = "";
+		String requestWhois = "";
+		
+		for (String ip : ips) {
+			
+			try{
+				requestNw = "https://stat.ripe.net/data/network-info/data.json?resource="+ip;
+				String resultNw = HTTPGetCommand(requestNw);
+				JSONObject jObjNw = new JSONObject(resultNw);
+				String bgpPrefix = (String)jObjNw.getJSONObject("data").get("prefix");
+				String asn = (String)jObjNw.getJSONObject("data").getJSONArray("asns").get(0);
+
+				requestASN = "https://stat.ripe.net/data/as-overview/data.json?resource=AS"+asn;
+				String resultASN = HTTPGetCommand(requestASN);
+				JSONObject jObjASN = new JSONObject(resultASN);
+				String asName = (String)jObjASN.getJSONObject("data").get("holder");
+				
+				entities.addEntity(
+						buildEntity(ip, asn, asName, bgpPrefix, "", "", "https://stat.ripe.net/docs/data_api")
+						);
+				
+			} catch(Exception e1){
+				
+				try {
+					requestWhois = "https://stat.ripe.net/data/whois/data.json?resource="+ip;
+					String resultWhois = HTTPGetCommand(requestWhois);
+					JSONObject jObjWhois = new JSONObject(resultWhois);
+					String asn = "";
+					String asName = "Not Found";
+					String bgpPrefix = "";
+					String mntBy = "";
+					
+					if(jObjWhois.getJSONObject("data").getJSONArray("irr_records").length() != 0) {
+						for (int i=0 ; i < jObjWhois.getJSONObject("data").getJSONArray("irr_records").getJSONArray(0).length() ; i++ ) {
+							String key = (String) jObjWhois.getJSONObject("data").getJSONArray("irr_records").getJSONArray(0).getJSONObject(i).get("key");
+							
+							if( key.equals("origin") ){
+								asn = (String) jObjWhois.getJSONObject("data").getJSONArray("irr_records").getJSONArray(0).getJSONObject(i).get("value");
+							}
+							if( key.equals("descr") ){
+								asName = (String) jObjWhois.getJSONObject("data").getJSONArray("irr_records").getJSONArray(0).getJSONObject(i).get("value");
+							} 
+							if(key.equals("mnt-by")){
+								mntBy = (String) jObjWhois.getJSONObject("data").getJSONArray("irr_records").getJSONArray(0).getJSONObject(i).get("value");
+							}
+							if( key.equals("route") ){
+								bgpPrefix = (String) jObjWhois.getJSONObject("data").getJSONArray("irr_records").getJSONArray(0).getJSONObject(i).get("value");
+							}
+						}
+					
+					} else {
+						for (int i=0 ; i < jObjWhois.getJSONObject("data").getJSONArray("records").getJSONArray(0).length() ; i++ ) {
+							String key = (String) jObjWhois.getJSONObject("data").getJSONArray("records").getJSONArray(0).getJSONObject(i).get("key");
+							
+							if( key.equals("netname") ){
+								asName = (String) jObjWhois.getJSONObject("data").getJSONArray("records").getJSONArray(0).getJSONObject(i).get("value");
+							} 
+							if( key.equals("inetnum") ){
+								bgpPrefix = (String) jObjWhois.getJSONObject("data").getJSONArray("records").getJSONArray(0).getJSONObject(i).get("value");
+							}
+						}
+					}
+					if(asName==null || asName==""){
+						if(mntBy != null){
+							asName = mntBy;
+						} else {
+							asName = "Not found";
+						}
+					}
+					entities.addEntity(
+							buildEntity(ip, asn, asName, bgpPrefix, "", "", "https://stat.ripe.net/docs/data_api")
+							);
+					//We save the ips that we cannot process
+					if(asn.equals("")){
+						UnknownRange unknownRange = new UnknownRange();
+						unknownRange.setAsName(asName);
+						unknownRange.setIp(ip);
+						unknownRange.setRange(bgpPrefix);
+						tracerouteDao.addUnknowRange(unknownRange);
+					}
+				
+				} catch(Exception e2){
+					log.info("ERROR with IP: "+ip+" IP2ASN RIPE: Error searching IP in the server");
+					entities.addEntity(
+							buildEntity(ip, "", "Not found", "", "", "", "https://stat.ripe.net/docs/data_api")
+							);
+					//We save the ips that we cannot process
+					UnknownRange unknownRange = new UnknownRange();
+					unknownRange.setIp(ip);
+					tracerouteDao.addUnknowRange(unknownRange);
+					
+				}
+			}
+			
+		}
+		log.info("Number of IPs processed by RIPE: "+entities.getEntities().size());
+		return entities;
+	}
+	
 	public Entity buildEntity(String ip, String asNumber, String asName, 
-			String bgpPrefix, String location, String registry){
+			String bgpPrefix, String location, String registry, String source){
 		Entity entity = new Entity();
 		
 		entity.setIp(ip);
@@ -243,8 +351,12 @@ public class MappingDaoImpl implements MappingDao {
 		entity.addBgpPrefixes(bgpPrefix);
 		entity.setLocation(location);
 		entity.setRegistry(registry);
-		entity.setSource("http://www.team-cymru.org/Services/ip-to-asn.html");
-		entity.setType("AS");
+		entity.setSource(source);
+		if(isIxp(asName)){
+			entity.setType("IXP");
+		} else {
+			entity.setType("AS");
+		}
 		if(!bgpPrefix.equals("")){
 			long[] range = getRange(bgpPrefix);
 			entity.setIpNum(range[0]);
@@ -252,6 +364,7 @@ public class MappingDaoImpl implements MappingDao {
 			entity.setRangeHigh(range[2]);
 			entity.setNumRangeIps(range[3]);
 		}
+		entity.setTimeStamp(new Date());
 		return entity;
 	}
 	
@@ -355,39 +468,7 @@ public class MappingDaoImpl implements MappingDao {
 		return ipGeoMapping;
 	}
 
-	
-//	private long[] getRange(String ipWithMask){
-//		
-//		String[] ip = ipWithMask.split("/");
-//		String[] ipPosition = ip[0].split("\\.");	
-//		//Step 0. Check only IPv4 addresses
-//		if (ipPosition.length == 4){
-//			// Step 1. Convert IPs into ints (32 bits).
-//			long addr = (( Long.parseLong(ipPosition[0]) << 24 ) & 0xFF000000) | 
-//					(( Long.parseLong(ipPosition[1]) << 16 ) & 0xFF0000) | 
-//					(( Long.parseLong(ipPosition[2]) << 8 ) & 0xFF00) | 
-//					( Long.parseLong(ipPosition[3]) & 0xFF);
-//			// Step 2. Get CIDR mask
-//			int mask = (-1) << (32 - Integer.parseInt(ip[1]));
-//			// Step 3. Find lowest IP address
-//			long rangeLow = addr & mask;
-//			// Step 4. Find highest IP address
-//			long rangeHigh = rangeLow + (~mask);
-//			// Step 5. NUmber of ips in range
-//			long numRangeIps = rangeHigh - rangeLow;
-//			long[] data = {addr,rangeLow,rangeHigh,numRangeIps};
-//			return data;
-//			
-//		} else {
-//			log.info("Error for: "+ipWithMask);
-//			long[] data = {0,0,0,0};
-//			return data;
-//		}
-//	}
-	
 
-	
-	
 	private long[] getRange(String ipWithMask){
 		
 		String[] ip = ipWithMask.split("/");
@@ -416,6 +497,65 @@ public class MappingDaoImpl implements MappingDao {
 			long[] data = {0,0,0,0};
 			return data;
 		}
+	}
+
+
+	@Override
+	public boolean isIxp(String possibleIxp) {
+		
+		//We first load the ixpMap file
+		if (ixpMap == null) {
+			try {
+				Scanner scanner = new Scanner(context.getResource(
+						"classpath:ixp/ixp-overlaps")
+						.getInputStream());
+				ixpMap = new ArrayList<String>();
+				while (scanner.hasNextLine()) {
+					String line = scanner.nextLine();
+					ixpMap.add(line);
+				}
+				scanner.close();
+			} catch (IOException e) {
+				//log.info("Problems opening weakwords file");
+				return false;
+			}
+		}
+		//Now we search if it can be a possibleIxp
+		possibleIxp = possibleIxp.toLowerCase();
+		for (String term : ixpMap) {
+			if(possibleIxp.trim().toLowerCase().contains(term.toLowerCase()))
+				return true;
+		}
+
+		return false;
+	}
+
+
+
+	
+	private String HTTPGetCommand(String request) throws Exception{
+		
+			URL url = new URL(request); 
+	        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+	        connection.setRequestMethod("GET");
+	        connection.setDoInput(true);
+	        connection.setDoOutput(true);        
+	 
+			int status = connection.getResponseCode();
+			if ((status==200) || (status==201)){
+				Scanner scanner = new Scanner(connection.getInputStream());
+				String line = "";
+				while (scanner.hasNextLine()) {
+					line = line + scanner.nextLine();
+				}
+				scanner.close();
+				connection.disconnect();
+				return line;
+	
+			} else {
+				connection.disconnect();
+				throw new Exception();
+			}
 	}
 
 

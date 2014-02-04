@@ -1,20 +1,16 @@
 package edu.upf.nets.mercury.action;
 
-import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.HttpURLConnection;
-import java.net.InetAddress;
-import java.net.Socket;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Scanner;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.junit.After;
 import org.junit.Before;
@@ -22,6 +18,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.xbill.DNS.DClass;
@@ -32,10 +29,12 @@ import org.xbill.DNS.Type;
 import com.google.gson.Gson;
 
 import edu.upf.nets.mercury.dao.MappingDao;
+import edu.upf.nets.mercury.dao.TracerouteDao;
 import edu.upf.nets.mercury.pojo.Entities;
 import edu.upf.nets.mercury.pojo.Entity;
 import edu.upf.nets.mercury.pojo.Hop;
 import edu.upf.nets.mercury.pojo.Traceroute;
+import edu.upf.nets.mercury.pojo.UnknownRange;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = { "classpath:applicationContext.xml" })
@@ -44,7 +43,14 @@ public class MappingDaoTest {
 	private static final Logger log = Logger.getLogger(MappingDaoTest.class.getName());
 
 	@Autowired
+    ApplicationContext context;
+	
+	@Autowired
 	MappingDao mappingDao;
+	
+	@Autowired
+	TracerouteDao tracerouteDao;
+	
 	Gson gson = new Gson();
 	
 	@Before
@@ -237,7 +243,7 @@ public class MappingDaoTest {
 					
 					String[] octets = ip.split("\\.");
 					String reversedIp = octets[3]+"."+octets[2]+"."+octets[1]+"."+octets[0];
-					int tries = 0;
+					//int tries = 0;
 			    	String query = reversedIp + ".origin.asn.cymru.com";
 			    	String line = "";
 		    	
@@ -311,7 +317,65 @@ public class MappingDaoTest {
     	
 	}
 	
-	
+    
+    @Ignore
+	@Test
+	public void getAsMappingsRIPE() {
+		
+		
+		List<String> ips = new ArrayList<String>(); 
+//		for(int j=0; j<4; j++){
+//			for(int i=0; i<3; i++){
+//				ips.add("193.145."+String.valueOf(j)+"."+String.valueOf(i));
+//			}
+//		}
+		ips.add("195.95.153.17");
+		Entities entities = mappingDao.getAsMappingsRIPE(ips);
+		
+		log.info("Number of IPs: "+entities.getEntities().size());
+		
+		UnknownRange uRange = tracerouteDao.getUnknowRange(ips.get(0));
+		uRange.toString();
+    }
+    
+    @Ignore
+	@Test
+	public void isIxp() {
+		
+		String possibleIxp = "ESPANIX ASOCIACION ESPANIX";
+		
+		List<String> ixpMap = new ArrayList<String>();
+		
+		//We first load the ixpMap file
+
+			try {
+				Scanner scanner = new Scanner(context.getResource(
+						"classpath:ixp/ixp-overlaps")
+						.getInputStream());
+				
+				while (scanner.hasNextLine()) {
+					String line = scanner.nextLine();
+					ixpMap.add(line);
+				}
+				scanner.close();
+			} catch (IOException e) {
+				log.info("Problems opening file");
+
+			}
+		
+		//Now we search if it can be a possibleIxp
+		possibleIxp = possibleIxp.toLowerCase();
+		for (String term : ixpMap) {
+			if(possibleIxp.trim().toLowerCase().contains(term.toLowerCase()))
+				log.info("Found similarity "+possibleIxp+" >> "+term);
+		}
+
+
+		log.info("Not Found similarity");
+	}
+    
+    
+    
     
 	private long[] getRange(String ipWithMask){
 		
@@ -343,5 +407,67 @@ public class MappingDaoTest {
 		}
 	}
 	
+	
+    @Ignore
+	@Test
+	public void isIpPattern(){
+		
+		String ip = "255.0.0.0";
+		
+		String IPADDRESS_PATTERN = 
+				"^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
+				"([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
+				"([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
+				"([01]?\\d\\d?|2[0-4]\\d|25[0-5])$";
+		Pattern pattern = Pattern.compile(IPADDRESS_PATTERN);
+		Matcher matcher;
+		
+		  
+		matcher = pattern.matcher(ip);
+		boolean isIp = matcher.matches();	    	    
+	    
+		log.info("Address "+ip+" is a ip: "+isIp);
+	}
+	
+	
+    //@Ignore
+	@Test
+	public void isPrivateIp(){
+		
+		String ipAddress = "192.168.1.1";
+		long ip = convertToDecimalIp(ipAddress);
+    	boolean isPrivate = false;
+		if( ( 0x0A000000L <= ip 	&& ip <= 0x0AFFFFFFL ) || 
+			( 0xAC100000L <= ip 	&& ip <= 0xAC1FFFFFL ) || 
+			( 0xC0A80000L <= ip 	&& ip <= 0xC0A8FFFFL ) ){
+			isPrivate = true;
+		}
+		
+		log.info("Address "+ipAddress+" is a private ip: "+isPrivate);
+	}
+	
+	public long convertToDecimalIp(String ipAddress) { 
+//      String[] addrArray = ipAddress.split("\\.");
+//      long num = 0; 
+//      for (int i = 0; i < addrArray.length; i++) { 
+//          int power = 3 - i;
+//          num += ((Integer.parseInt(addrArray[i]) % 256 * Math.pow(256, power))); // (% 256) == (& 0xFF) ; Math.pow(256,power) == (<< 8 * power) 
+//      } 
+//      return num; 
+		
+		try {
+		long result = 0;
+		String[] ipAddressInArray = ipAddress.split("\\.");
+		for (int i = 3; i >= 0; i--) {
+			long ip = Long.parseLong(ipAddressInArray[3 - i]);
+			result |= ip << (i * 8);
+		}	 
+		return result;
+		} catch (Exception e){
+			log.info("The IP address is not a number: "+ipAddress);
+			
+			return 0;
+		}
+  }
     
 }

@@ -32,8 +32,8 @@ public class TracerouteDaoImpl implements TracerouteDao {
 	
 	private static final Logger log = Logger.getLogger(TracerouteDaoImpl.class.getName());
 	/*
-	“save” means “insert it if record not exists” and “update it if record  exists”, or simply saveOrUpdate().
-	“insert”  means “insert it if record not exits” and “ignore it if record existed”.
+	“save” means “insert it if record do not exists” and “update it if record  exists”, or simply saveOrUpdate().
+	“insert”  means “insert it if record do not exits” and “ignore it if record existed”.
 	*/
 	
 	@Autowired
@@ -217,37 +217,36 @@ public class TracerouteDaoImpl implements TracerouteDao {
 			entities.add(entityCymru);
 		}
 		
-		//We change the code to optimize the query 
-		List<Entity> entityList;
-		if( (entityList = mongoTemplate.find(
+		Entity entityRipe;
+		if( (entityRipe = mongoTemplate.findOne(
 				new Query( Criteria.where("rangeLow").lte(ip).
 						and("rangeHigh").gte(ip).
-						and("source").ne("http://www.team-cymru.org/Services/ip-to-asn.html")).
-						with(new Sort(Sort.Direction.DESC, "timeStamp")), 
-				Entity.class)) != null ){
-			entities.addAll(entityList);
+						and("source").is("https://stat.ripe.net/docs/data_api")).
+						with(new Sort(Sort.Direction.ASC, "numRangeIps")), 
+				Entity.class)) != null){
+			entities.add(entityRipe);
 		}
 		
-//		Entity entityEuroix;
-//		if( (entityEuroix = mongoTemplate.findOne(
-//				new Query( Criteria.where("rangeLow").lte(ip).
-//						and("rangeHigh").gte(ip).
-//						and("source").is("https://www.euro-ix.net")).
-//						with(new Sort(Sort.Direction.DESC, "timeStamp")), 
-//				Entity.class)) != null ){
-//			entities.add(entityEuroix);
-//		}
-//		
-//		Entity entityPeeringdb;
-//		if( (entityPeeringdb = mongoTemplate.findOne(
-//				new Query( Criteria.where("rangeLow").lte(ip).
-//						and("rangeHigh").gte(ip).
-//						and("source").is("https://www.peeringdb.com")).
-//						with(new Sort(Sort.Direction.DESC, "timeStamp")), 
-//				Entity.class)) != null ){
-//			entities.add(entityPeeringdb);
-//		}
-//		
+		Entity entityEuroix;
+		if( (entityEuroix = mongoTemplate.findOne(
+				new Query( Criteria.where("rangeLow").lte(ip).
+						and("rangeHigh").gte(ip).
+						and("source").is("https://www.euro-ix.net")).
+						with(new Sort(Sort.Direction.DESC, "timeStamp")), 
+				Entity.class)) != null ){
+			entities.add(entityEuroix);
+		}
+		
+		Entity entityPeeringdb;
+		if( (entityPeeringdb = mongoTemplate.findOne(
+				new Query( Criteria.where("rangeLow").lte(ip).
+						and("rangeHigh").gte(ip).
+						and("source").is("https://www.peeringdb.com")).
+						with(new Sort(Sort.Direction.DESC, "timeStamp")), 
+				Entity.class)) != null ){
+			entities.add(entityPeeringdb);
+		}
+		
 //		Entity entityManual;
 //		if( (entityManual = mongoTemplate.findOne(
 //				new Query( Criteria.where("ip").is(ip2find).
@@ -320,6 +319,13 @@ public class TracerouteDaoImpl implements TracerouteDao {
 		query.fields().include("tracerouteGroupId").include("timeStamp").include("originIp").include("originCity").
 			include("originCountry").include("originAS").include("originASName").include("destination").include("destinationCity").
 			include("destinationCountry").include("destinationAS").include("destinationASName");
+		
+		//For pagination
+//		int offset = 1;
+//		int start = 1000;
+//		int count = 1000;		
+//		query.skip(offset*start).limit(count);
+		
 		return mongoTemplate.find(query, TracerouteIndex.class);
 	}
 	

@@ -2,6 +2,8 @@ package edu.upf.nets.mercury.task;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -259,18 +261,22 @@ public class TaskProcessorImpl implements TaskProcessor{
     		List<Trace> auxList = tracerouteDao.getTraceListByTracerouteGroupId(tracerouteIndex.getTracerouteGroupId());
     		traceList.addAll(auxList);
     		tracerouteIndexesProcessing.add(tracerouteIndex);
-    		//1.2 We need to add the destinationIP because some traceroutes do not include it as a hop
-    		ips.add(auxList.get(0).getDestinationIp());
-    		//1.3 We need to add the sourceIP to process
+
+    		//1.2 We need to add the sourceIP to process
     		if(validateIp(auxList.get(0).getSourceIp())){
     			if (! isPrivateIp(convertToDecimalIp(auxList.get(0).getSourceIp()))){
     				ips.add(auxList.get(0).getSourceIp());
+    				geoips.add(auxList.get(0).getSourceIp());
     			}
     		}
-    		//1.4 We need to add the geo destinationIP because some traceroutes do not include it as a hop
-    		geoips.add(auxList.get(0).getDestinationIp());
-    		//1.5 We need to add the geo sourceIP to process
-    		geoips.add(auxList.get(0).getSourceIp());
+    		//1.3 We need to add the destinationIP because some traceroutes do not include it as a hop
+    		if(validateIp(auxList.get(0).getDestinationIp())){
+    			if (! isPrivateIp(convertToDecimalIp(auxList.get(0).getDestinationIp()))){
+    				ips.add(auxList.get(0).getDestinationIp());
+    				geoips.add(auxList.get(0).getDestinationIp());
+    			}
+    		}
+    		
 		}
     	if(! tracerouteIndexesProcessing.isEmpty()){
     		tracerouteDao.updateTracerouteIndexes(tracerouteIndexesProcessing);
@@ -457,6 +463,19 @@ public class TaskProcessorImpl implements TaskProcessor{
 	    		ASTracerouteStat asTracerouteStat = new ASTracerouteStat();
 	    		String tracerouteGroupId = null;
 	    		List<Trace> tracesMapped = tracerouteDao.getTraceListByTracerouteGroupId(tracerouteIndex.getTracerouteGroupId());
+	    		//PART 0 
+	    		//We order the traces to prevent order errors
+	    		Collections.sort(tracesMapped, new Comparator<Trace>() {
+					@Override
+					public int compare(Trace trace1, Trace trace2) {
+						int hop1 = Integer.parseInt(trace1.getHopId());
+						int hop2 = Integer.parseInt(trace2.getHopId());
+						return Integer.signum(hop1 - hop2); 
+					}
+	    		});
+	    		
+	    		
+	    		
 	    		
 	    		//PART 1 
 	    		//We load the ASTraceroute with entities for each hop
